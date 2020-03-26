@@ -1,0 +1,125 @@
+Hi!
+
+One possible solution is:
+ADACGHDCFKYOGJHFXUZRVKWTJPBOEBISQMELYNRUIXPVTZWML-QSN
+
+An easy backtracking search has given the above solution, assume that the solution's length is L=53 (to search the other case just change the L value for the only other possibility L=52 in the code).
+In each depth of the search we add a pair of (same) letter (or a hyphen), whose distance is good. If we can't do that or we can prove that there is no solution for that string, then we just backtracking.
+
+At each depth we see that what letter can we write on each position (where there is still no letter and no hyphen)
+, if we write the j-th character to the i-th position, then in i+j+1 or in i-j-1 there should be no letter (and no hyphen), and if there is already a hyphen in the word, then we can't write more hyphen. A small improvement on this is that we see that for all not used letter there is at least one good position for it in the word. It took less than 1 second, only 140 iterations to find a solution (of course this timing depends on the order of the search).
+--------
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <assert.h>
+
+#define N 26 // 5
+#define L 53 // 11
+
+
+int main(void){
+    
+    int p[N+2][L],q[L+1],pos[N+2],reach[N+2],i,j,o,l,test,best,depth,backtrack,si,p1,p2,o2,out[N+2];
+    int size[N+2],letter[N+2][2*N+3],dir[N+2][2*N+3],position[N+2],nc,rec=0,nspace,nspace2;
+    long long int it=0;
+    time_t sec=time(NULL);
+    
+    for(i=0;i<L;i++)p[0][i]=0;
+    pos[1]=-1;
+    size[1]=N;
+    position[1]=0;
+    for(i=0;i<N;i++){letter[1][i]=i+1;dir[1][i]=1;}
+    depth=1;
+    printf("N=%d;L=%d;\n",N,L);
+    while(depth>0){
+        pos[depth]++;
+        //printf("depth=%d;\n",depth);
+        backtrack=0;
+        if(pos[depth]>=size[depth])backtrack=1;
+        else{
+           it++;
+           for(i=0;i<L;i++)p[depth][i]=p[depth-1][i];
+
+           o=position[depth];
+           l=letter[depth][pos[depth]];
+           p[depth][o]=l;
+           if(l!=N+1){
+              if(dir[depth][pos[depth]]==1)o2=o+l+1;
+              else o2=o-l-1;
+              p[depth][o2]=l;
+           }
+           for(i=0;i<L;i++)q[i]=p[depth][i];
+           
+           if(depth>rec){
+               rec=depth;
+               printf("depth=%d; iteration=%lld;%ld sec.\n",depth,it,time(NULL)-sec);
+               for(i=0;i<L;i++){
+                   if(q[i]==N+1)printf("-");
+                   else printf("%c",q[i]-1+'A');
+               }
+               printf("\n\n");
+               if(depth==N+1){
+                  for(i=1;i<=N;i++){// check the solution
+                      int cnt=0,t[L];
+                      for(j=0;j<L;j++)if(q[j]==i)t[cnt++]=j;
+                      assert(cnt==2&&t[1]-t[0]==i+1);
+                  }
+                  return 0;
+               }
+           }
+           
+           nspace=0;
+           for(i=1;i<=N;i++)out[i]=0;
+           for(i=0;i<L;i++){ out[q[i]]=1;if(q[i]==N+1)nspace++;}
+           
+           best=2*N+2;
+           nspace2=nspace;
+           for(i=0;i<N;i++)reach[i]=0;
+           for(i=0;i<L;i++)if(q[i]==0){
+               nc=0;
+               for(j=1;j<=N;j++)if(out[j]==0){
+                   p1=i+j+1;
+                   p2=i-j-1;
+                   if((p1<L&&q[p1]==0)||(p2>=0&&q[p2]==0)){nc++;reach[j]=1;}
+               }
+               if(nc==0)nspace2++;
+               if(nc<best){best=nc;o=i;}
+           }
+           
+           test=1;
+           for(i=0;i<N;i++)if(out[i]==0&&reach[i]==0){test=0;break;}
+           
+           if(test&&nspace2<=L-2*N){
+              depth++;
+              si=0;
+              position[depth]=o;
+              for(j=1;j<=N;j++)if(out[j]==0){
+                  p1=o+j+1;
+                  p2=o-j-1;
+                  if(p1<L&&q[p1]==0){
+                      dir[depth][si]=1;
+                      letter[depth][si]=j;
+                      si++;
+                  }
+                  if(p2>=0&&q[p2]==0){
+                      dir[depth][si]=-1;
+                      letter[depth][si]=j;
+                      si++;
+                  }
+              }
+              if(nspace==0){
+                dir[depth][si]=1;
+                letter[depth][si]=N+1;// for space
+                si++;
+              }
+
+              size[depth]=si;
+              pos[depth]=-1;
+           }
+        }
+        if(backtrack)depth--;
+    }
+    printf("There is no solution.\n");
+    return 0;
+}
