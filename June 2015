@@ -1,0 +1,227 @@
+Hi!
+
+One solution:  (-100,0),(100,0),(-80,289),(443,235),(286,-608),(-1000,-196),(-86,1604),(527,-2045),(3120,422) with convex hull's area=7706357, see my attached code that has found this ( random algorithm and depends on the initial seed, that is time(NULL), so it is unlikely that it will rediscover the same polygon for a new run, but finds several good point sets, with area>=7700000 ).
+
+  First I have found a good solution (convex hull's area is close to 7700000), then optimized the point set by perturbation.
+
+  To find a good solution I have generated some random point sets where in that each point is (very) far from the previous point's average (but still closer than 3*standard dev.), if we choose (u,v) in such a way that
+u=x+r*cos(deg)
+v=y+r*sin(deg)
+where r<=3*sd (here sd is the standard dev.) and (x,y) is the average of the points so far, then the distance of (u,v) from (x,y) is r, round this (u,v) to an integer point (we still need to check that we won't be far from (x,y)). Finally find the convex hull of the polygon with Jarvis march, then the calculation of the polygon's area is easy. (the double of the area is an integer).
+
+  One such convex hull had area=7680036.5 . To perturbate this point set I have choosen close degrees to the above original degree selection.
+
+------------
+
+#include <stdio.h>
+#include <math.h>
+#include <time.h>
+
+#define PI 3.1415926535897932384626433832795028842
+#define eps 1e-12
+#define N 9 // number of points we need to choose (the first two is fixed)
+
+// use far points from the average
+#define IR 0.9995
+
+// for random number generator
+#define BIG_PRIME 31862344740937LL
+#define PRIMITIVE_ROOT 7927
+
+typedef long long int lli;
+
+lli gen;
+lli getrandom(int range)  {
+    
+    gen=(PRIMITIVE_ROOT*gen)%BIG_PRIME;
+    if(gen<0)gen+=BIG_PRIME;
+    if(gen==0)gen=1;
+    
+    return (gen%range);
+}
+
+// routines to get the convex hull using jarvis march ( if there are collinear points this code can return=0 for the area ? )
+
+int turn(int px,int py,int qx,int qy,int rx,int ry){
+    int v=(qx-px)*(ry-py)-(rx-px)*(qy-py);
+    if(v<0)return -1;
+    if(v==0)return 0;
+    return 1;
+}
+
+int dist2(int px,int py,int qx,int qy){return (px-py)*(px-py)+(qx-qy)*(qx-qy);}
+
+void nextpoint(int *qx,int *qy,int ptsx[],int ptsy[],int n,int px,int py){// choose the next point for Jarvis
+
+    int i,t,rx,ry,ind;
+
+    if(px==ptsx[0]&&py==ptsy[0])ind=1;else ind=0;
+    *qx=ptsx[ind];
+    *qy=ptsy[ind];
+    
+    for(i=0;i<n;i++){
+        rx=ptsx[i];
+	ry=ptsy[i];
+	if(rx!=px||ry!=py){
+        t=turn(px,py,*qx,*qy,rx,ry);
+	if(t==-1||(t==0&&dist2(px,py,rx,ry)>dist2(px,py,*qx,*qy))){
+	  *qx=rx;
+	  *qy=ry;
+	}
+    }}
+    return;}
+
+int chull(int ptsx[],int ptsy[],int n){// return the double of area of the convex hull of the ptsx[],ptsy[] points
+  
+    int i,size=1;
+    int qx[n+1],qy[n+1];
+    
+    for(i=0;i<n;i++)// choose the leftmost point
+        if(i==0||(ptsx[i]<qx[0]||(ptsx[i]==qx[0]&&ptsy[i]<qy[0]))){
+	   qx[0]=ptsx[i];
+	   qy[0]=ptsy[i];}
+    
+    for(i=0;i<size;i++){
+        nextpoint(&qx[i+1],&qy[i+1],ptsx,ptsy,n,qx[i],qy[i]);
+	if(qx[0]==qx[i+1]&&qy[0]==qy[i+1])break;
+	if(size>n)return 0;
+	size++;
+    }
+    
+    int area2=0;
+    for(i=0;i<size;i++)area2+=qx[i]*qy[(i+1)%size]-qx[(i+1)%size]*qy[i];
+    if(area2<0)area2=-area2;
+    return area2;
+}
+
+
+int main(void){
+  
+    int i,j,test;
+    int re[N],im[N],x,y,area2,rec=0;
+    double deg,r,avre,avim,tr,ti,sd,gr,gr2,radius[N],degree2[N];
+    // original degree sequence:
+    //double degree[N]={0.0,0.0,1.841602,0.292168,4.959318,3.309982,1.604726,4.986336,0.177186};
+    
+    // a better sequence:
+    double degree[N]={0.0,0.0,1.841197,0.287207,4.971225,3.298063,1.590611,4.971640,0.163354};
+    lli runs=0,nfail=0;
+    time_t sec=time(NULL);
+    
+    re[0]=-100;im[0]=0;
+    re[1]=100;im[1]=0;
+    
+    gen=time(NULL);
+    while(1){
+    
+    runs++;
+    test=1;
+    for(i=2;i<N;i++){
+       avre=0.0;avim=0.0;
+       for(j=0;j<i;j++){avre+=(double)re[j];avim+=(double)im[j];}
+       avre/=(double)i;
+       avim/=(double)i;
+       // average of all points (so far) is avre+I*avim
+       
+       sd=0.0;
+       for(j=0;j<i;j++){
+	   tr=((double)re[j])-avre;
+	   ti=((double)im[j])-avim;
+	   sd+=tr*tr+ti*ti;
+       }
+       sd=sqrt((double)sd/i);
+       // standard dev. of all points is sd
+       
+       gr=(double)getrandom(10000)/10000;
+       gr=IR+(1.0-IR)*gr;// we use big radius
+       r=3.0*sd*gr;
+       
+       gr2=(double)getrandom(10000)/10000;
+       deg=degree[i]+2.0*PI*(gr2-0.5)/1000.0;
+       // or use deg=2.0*PI*gr2;
+	   
+           // our point, not far from the average is tr+I*ti
+	   tr=avre+r*cos(deg);
+	   ti=avim+r*sin(deg);
+	   
+	   // choose a close Gaussian point
+	   x=(int)tr;
+	   y=(int)ti;
+	   
+	   tr=avre-(double)x;
+	   ti=avim-(double)y;
+	   if(sqrt(tr*tr+ti*ti)<=3.0*sd-eps){// we are at most 3 st. dev. from the average
+	      re[i]=x;
+	      im[i]=y;
+	      radius[i]=gr;
+	      degree2[i]=deg;
+	   }
+	   else {test=0;break;}
+    }
+    
+    if(!test)nfail++;
+    
+    if(test){
+    
+    area2=chull(re,im,N);
+
+    if(rec<area2){
+      rec=area2;
+      printf("time=%ld sec.;runs=%lld;nfail=%lld;IR=%lf; 2*area=%d;\n",time(NULL)-sec,runs,nfail,IR,area2);
+      for(i=0;i<N;i++)printf("(%d,%d),",re[i],im[i]);printf("\n");
+      printf("ListPlot[");for(i=0;i<N;i++){printf("{%d,%d}",re[i],im[i]);if(i!=N-1)printf(",");}printf("]\n");// for Wolfram ALpha print the points
+      for(i=2;i<N;i++)printf("%lf,",radius[i]);printf("\n");// print the radius
+      for(i=2;i<N;i++)printf("%lf,",degree2[i]);printf("\n");// print the degrees
+    }}}
+    
+    return 0;
+}
+// the starting solution
+//time=31 sec.;runs=17490974;nfail=64117;IR=0.999500; 2*area=15360073;
+//(-100,0),(100,0),(-80,289),(442,237),(277,-609),(-998,-208),(-115,1599),(556,-2034),(3106,463),
+//ListPlot[{-100,0},{100,0},{-80,289},{442,237},{277,-609},{-998,-208},{-115,1599},{556,-2034},{3106,463}]
+//0.999909,0.999966,0.999919,0.999610,0.999776,0.999759,0.999684,
+//1.841602,0.292168,4.959318,3.309982,1.604726,4.986336,0.177186,
+
+// other good results after perturbation:
+//time=207 sec.;runs=133084899;nfail=0;IR=0.999500; 2*area=15405774;
+//(-100,0),(100,0),(-80,289),(443,235),(266,-613),(-1003,-203),(-97,1602),(573,-2032),(3113,466),
+//ListPlot[{-100,0},{100,0},{-80,289},{443,235},{266,-613},{-1003,-203},{-97,1602},{573,-2032},{3113,466}]
+//0.999937,0.999971,0.999980,0.999921,0.999992,0.999561,0.999892,
+//1.842130,0.287145,4.943830,3.304469,1.592147,4.993326,0.177795,
+
+//time=253 sec.;runs=162129472;nfail=0;IR=0.999500; 2*area=15407775;
+//(-100,0),(100,0),(-80,289),(443,235),(282,-609),(-999,-207),(-90,1602),(540,-2043),(3104,511),
+//ListPlot[{-100,0},{100,0},{-80,289},{443,235},{282,-609},{-999,-207},{-90,1602},{540,-2043},{3104,511}]
+//0.999820,0.999960,0.999834,0.999953,0.999977,0.999974,0.999955,
+//1.841250,0.287113,4.965733,3.308571,1.590023,4.976701,0.192611,
+
+//time=649 sec.;runs=415997209;nfail=0;IR=0.999500; 2*area=15408652;
+//(-100,0),(100,0),(-80,289),(443,235),(286,-608),(-1000,-195),(-91,1604),(529,-2044),(3119,422),
+//ListPlot[{-100,0},{100,0},{-80,289},{443,235},{286,-608},{-1000,-195},{-91,1604},{529,-2044},{3119,422}]
+//0.999905,0.999983,0.999901,0.999967,0.999882,0.999888,0.999829,
+//1.841197,0.287207,4.971225,3.298063,1.590611,4.971640,0.163354,
+
+//time=284 sec.;runs=177737036;nfail=0;IR=0.999500; 2*area=15408876;
+//(-100,0),(100,0),(-80,289),(443,235),(286,-608),(-1000,-195),(-86,1604),(522,-2046),(3118,427),
+//ListPlot[{-100,0},{100,0},{-80,289},{443,235},{286,-608},{-1000,-195},{-86,1604},{522,-2046},{3118,427}]
+//0.999917,0.999985,0.999978,0.999762,0.999859,0.999997,0.999943,
+//1.842035,0.287205,4.970675,3.298032,1.587792,4.968501,0.164960,
+
+//time=723 sec.;runs=452953614;nfail=0;IR=0.999500; 2*area=15409191;
+//(-100,0),(100,0),(-80,289),(443,235),(286,-608),(-1000,-195),(-92,1604),(529,-2044),(3120,416),
+//ListPlot[{-100,0},{100,0},{-80,289},{443,235},{286,-608},{-1000,-195},{-92,1604},{529,-2044},{3120,416}]
+//0.999987,0.999975,0.999926,0.999888,0.999923,0.999986,0.999862,
+//1.840762,0.287148,4.971179,3.298639,1.591427,4.971651,0.161322,
+
+//time=999 sec.;runs=625901058;nfail=0;IR=0.999500; 2*area=15410710;
+//(-100,0),(100,0),(-80,289),(443,235),(286,-608),(-1000,-196),(-89,1604),(522,-2046),(3120,414),
+//ListPlot[{-100,0},{100,0},{-80,289},{443,235},{286,-608},{-1000,-196},{-89,1604},{522,-2046},{3120,414}]
+//0.999840,0.999984,0.999982,0.999905,0.999959,0.999829,0.999954,
+//1.841644,0.287186,4.971169,3.299021,1.589280,4.968597,0.160975,
+
+//time=1894 sec.;runs=1187916707;nfail=0;IR=0.999500; 2*area=15412714;
+//(-100,0),(100,0),(-80,289),(443,235),(286,-608),(-1000,-196),(-86,1604),(527,-2045),(3120,422),
+//ListPlot[{-100,0},{100,0},{-80,289},{443,235},{286,-608},{-1000,-196},{-86,1604},{527,-2045},{3120,422}]
+//0.999793,0.999981,0.999783,0.999905,0.999825,0.999890,0.999979,
+//1.841088,0.287107,4.970852,3.299168,1.587916,4.970385,0.163371,
