@@ -1,0 +1,121 @@
+Hi!
+
+There are two 15 digits solutions:
+182921919071841
+655785969669834
+
+Assume that n is a squarereversed number, if we know the first 8 digits of n, then we also know the last 7 digits of n^2, so with a simple table lookup we can get the last 7 digits of n (there could be multiple solutions), if we have precomputed (x^2)%(10^7) for every x<10^7. And finally check if n is a squarereversed number or not. See the attached c code.
+--------
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+
+#define L 7
+typedef long long int lli;
+
+lli mulmod(lli a,lli b,lli p){
+    lli y=(lli)((double)a*(double)b/p+0.5);
+    lli r=a*b-y*p;
+    if(r<0) r=r+p;
+
+    return r;
+}
+
+int *T,*U;
+void f(void){
+  
+    int i,p10=1;
+    lli x;
+    
+    for(i=0;i<L;i++)p10*=10;
+    T=(int*)malloc((p10+1)*sizeof(int));
+    U=(int*)malloc((p10+1)*sizeof(int));
+    
+    for(i=0;i<=p10;i++)U[i]=0;
+    for(i=0;i<p10;i++){
+        x=(lli)i*i;x%=p10;
+	U[1+x]++;
+    }    
+    for(i=1;i<=p10;i++)U[i]+=U[i-1];
+        for(i=0;i<p10;i++){
+        x=(lli)i*i;x%=p10;
+	T[U[x]]=i;
+        U[x]++;
+    }    
+
+        for(i=0;i<=p10;i++)U[i]=0;
+    for(i=0;i<p10;i++){
+        x=(lli)i*i;x%=p10;
+	U[1+x]++;
+    }    
+    for(i=1;i<=p10;i++)U[i]+=U[i-1];
+    return;
+}
+
+lli rev(lli n){
+    lli r=0;
+    while(n){r=10*r+(n%10);n/=10;}
+    return r;}
+    
+int main(){
+  
+    int d;
+    lli i,j,x,p10,r,off,res,TEN[19];
+    scanf("%d",&d);
+    assert(d>=2*L);
+    f();
+    
+    TEN[0]=1;for(i=1;i<19;i++)TEN[i]=10*TEN[i-1];
+    p10=TEN[d-L];
+
+    for(i=p10/10;i<p10;i++){
+        r=i/TEN[d-2*L];
+	off=rev(r);
+	
+	for(j=U[off];j<U[off+1];j++){
+	    x=i*TEN[L]+T[j];
+	    res=mulmod(x,x,TEN[d]);
+	    if(x==rev(res))printf("x=%lld;\n",x);}}
+
+   return 0;
+}
+-----------
+
+Hi!
+
+To get bonus **, larger squarereversed numbers:
+
+650700037578750084
+125631041500927357539
+673774165549097456624
+16719041449406813636569
+61250745649972742370386904
+67606700276236965651817526
+90023320070600225470121747
+90061407515524778881607747
+1487765520677699458074768471
+4403809479672994628231714138
+6137500977894954428169516854
+
+and there is no more squarereversed number in the (10^15,10^30) interval, to get this it took me roughly 152 thread hours on a single Intel Core i3 processor.
+
+I've used an O(10^(2*d/5)) algorithm (using O(10^(d/5)) memory), which is an improvement of the obvious O(10^(d/2)) algorithm, 
+if we search all d digits squarereversed number. (d=n in the puzzle).
+	   
+To reach a speed up by a factor of 10^k: let t=2*k-(d%2)
+suppose that N is a squarereversed number and h=N%(10^g), where g=(d-t)/2, note that here g=d/2-k+(d%2)/2.
+	   
+N^2==h^2 mod 10^g, from this we know the first g digits of N. What is missing is the middle t digits of N.
+If the t middle digits is x, then N==h+x*10^g mod 10^(t+g)
+so (eq) N^2==h^2+2*10^g*(h*x) mod 10^(t+g), if t<=g is true.
+let r=(h^2\10^g) mod 10^t. In N^2 in the t middle position's of N we see the reverse of x, thus using (eq):
+rev0(x,t)==r+2*h*x mod 10^t, where rev0(z,l) is the reverse of z if z has l digits, and here leading zero is possible.
+And that is what we'll use, for fixed x and fix h mod 10^t=N mod 10^t:
+r==rev0(x,t)-2*h*x mod 10^t, so for r the solution is unique, calculate this r for each x=0,1,..,10^t-1.
+Using this table we can get the good x values for each r (and in average we expect one good x value), with these middle digits we know all digits of N, check if it is a squarereversed number or not. The total additional computation cost is O(10^(2*t))=O(10^(4*k)), because for fixed (N mod 10^t) we spend O(10^t) to build the table and there are 10^t possibilities for (N mod 10^t). And we need O(10^t)=O(10^(2*k)) memory.
+It is easy to see that the optimal k value is: k=(d+1)\10; actually used k=(d+3)\10 in my code.
+
+Another small trick: N is not divisible by 10: otherwise N^2 is also divisible by 100, but then a1=0.
+Furthermore in the above algorithm to make the table it is enough to know N mod ((10^t)/2) since 
+rev0(x,t)==r+2*h*x mod 10^t so we would build the same table for h and h+(10^t)/2.
