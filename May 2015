@@ -1,0 +1,51 @@
+Hi!
+
+175,199,223 is a solution (there is no way to end the game in less than 1 hour, in fact the shortest game ends in exactly one hour). 
+See the attachment for my c code, running time is roughly 15 seconds.
+
+For alternate solutions: if the initial money is (for example) 0, 1 and 2 then the game never ends.
+
+-----------
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#define maxn 255
+#define gametime 5
+
+
+int main(void){
+  
+    int f,g,h,i,j,k,t,test,v,***dp,size,first;
+    size=3*maxn+1;
+    dp=(int***)(malloc)(size*sizeof(int**));
+    for(i=0;i<size;i++)dp[i]=(int**)(malloc)(size*sizeof(int*));
+    for(i=0;i<size;i++)for(j=0;j<size;j++)dp[i][j]=(int*)(malloc)(size*sizeof(int));
+    
+    // if the initial money is i,j and k then we store at dp[i][j][k] the time needed for the optimal play 
+    
+    for(i=0;i<size;i++)for(j=0;j<size;j++)for(k=0;k<size;k++){
+        if(i==j||j==k||k==i)dp[i][j][k]=gametime;// there is two equal amount of money, the game finished
+	else dp[i][j][k]=-1;// still not reached state
+    }
+    
+    for(t=gametime,test=1;test;t+=gametime){
+        test=0;first=1;
+	for(i=0;i<size;i++)for(j=0;j<size;j++)for(k=0;k<size&&i+j+k<=3*maxn;k++)if(dp[i][j][k]==-1){
+	    f=0;g=1;
+	    // If the optimal solution (so with the fewest number of turns) needs t+gametime seconds then
+	    // there is a turn after that the optimal solution needs t seconds to finish
+	    // and there is no turn for that after that turn we need less than t seconds to finish the game
+	    if(i>=j){v=dp[i-j][2*j][k];if(v==t)f=1,h=0;if(v>=0&&v<t)g=0;}
+	    if(j>=i){v=dp[2*i][j-i][k];if(v==t)f=1,h=1;if(v>=0&&v<t)g=0;}
+	    if(j>=k){v=dp[i][j-k][2*k];if(v==t)f=1,h=2;if(v>=0&&v<t)g=0;}
+	    if(k>=j){v=dp[i][2*j][k-j];if(v==t)f=1,h=3;if(v>=0&&v<t)g=0;}
+	    if(k>=i){v=dp[2*i][j][k-i];if(v==t)f=1,h=4;if(v>=0&&v<t)g=0;}
+	    if(i>=k){v=dp[i-k][j][2*k];if(v==t)f=1,h=5;if(v>=0&&v<t)g=0;}
+	    if(f==1&&g==1){test=1;dp[i][j][k]=t+gametime;
+	      if(first&&i<=maxn&&j<=maxn&&k<=maxn){printf("dp[%d][%d][%d]=%d;\n",i,j,k,dp[i][j][k]);first=0;}
+	    }
+	}
+    }
+    return 0;
+}
