@@ -1,0 +1,35 @@
+Hi!
+
+The answer is:
+3271652365264
+
+A dynamic programming solution in PARI-GP:
+fun(L)={A=matrix(7,2*L+1,i,j,0);A[2,L+1]=1;
+for(i=1,L,B=matrix(7,2*L+1,i,j,0);
+for(b=0,1,for(k=1,7,for(l=1,2*L+1,if(A[k,l]!=0,
+s=k%7;r=l-(L+1);
+if(s==b,r=r+2*b-1);
+s=(6+s*(5+s*s*s*(2+s*(3+s)))+b*(5+s*(5+s*(6+s*s*(3+s*6)))))%7;
+k2=s%7;if(k2==0,k2=7);
+l2=r+(L+1);
+B[k2,l2]+=A[k,l]))));A=B);
+return(2^L-sum(i=1,7,A[i,L+1]))}
+
+Here fun(42) gives the answer for 42 bits.
+The complexity of the above algorithm is O(L^2) for L bits, much faster then the almost trivial O(2^L*L) algorithm.
+In general if we need the answer for L bits, then for every sequence and in each step r will be in [-L,L] interval and it is enough to know s mod 7. For a given v if we know r and (s mod 7) when we process the bit's of v, then we can get the value of r at the end of the function. So count only the number of possible sequences of length i bits for that we have r and (s mod 7), for the next bit we have 2 possibilities b=0 or 1, for all these sequences we have the same new 
+r2 and (s2 mod 7) values if we fix the bit. After i=L we get the number of sequences with L bits for each (possible) r and (s mod 7).
+
+In the code: we store the number of sequences in the matrix A, in A[k,l] we see the number of sequences that has s=k mod 7 and r=l-(L+1), in this way the size of matrix is 7X(2*L+1).
+At the end, after we processed all L bits, the number of sequences that return a zero value is just sum(i=1,7,A[i,L+1]), so the number of sequences for a non-zero return value is just 2^L-sum(i=1,7,A[i,L+1]).
+------------
+Hi!
+
+For asterik: there are 8088 sequences for 14 bits that has return value zero. 
+(so ask the zero value and not the non-zero value!)
+And the connection: the original IBM PC used the Intel 8088 processor, ref. : https://en.wikipedia.org/wiki/IBM_Personal_Computer
+------------
+Thanks! 
+
+My new solution's connection: Ibm "broke the U.S. patent record with 8,088 patents granted to its inventors in 2016" 
+ref. https://www-03.ibm.com/press/us/en/pressrelease/51353.wss
