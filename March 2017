@@ -1,0 +1,89 @@
+Hi!
+
+One possible initial config. of the 64 watches for that we can get no more than 37 watches (and here 37 is reachable):
+
+  2  3  3  1  3  1  1  3
+  1  1  1  1  3  1  1  2
+  1  1  1  2  1  3  1  3
+  3  3  2  3  1  3  2  2
+  2  1  2  1  3  2  3  1
+  3  1  1  1  2  2  2  2
+  2  2  1  1  2  3  3  2
+  2  2  1  3  1  1  1  2
+
+First observe that we need to know only the hour mod 3 on the watches, because the mark on the watch is in those positions (3,6,9,12), where hour mod 3 = 0. Thus it is enough to see what is the hour ahead adjust mod 3 on the columns (on arms), and on rows (on a single octopus). But if we fix the adjust on the columns, then in each row we can select the best adjust in just O(N) time (select that hour mod 3 that gives the most number of zeros mod 3). Hence the total time to get the optimal number of marks here (per matrix) is O(3^N*N^2), in our case N=8. Generate random matrix, and compute the optimal (most) number of marks on the watches, we can get a solution for the puzzle (where the optimal marks is at most 37) roughly in a minute (depends on srand()). See the attached c code!
+---------
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define N 8
+int a[N][N];
+
+
+int opt(void){
+  
+    int h,i,j,m,x,p3=1,d2[N],T[3],cnt,opt=0,res;
+    
+    for(i=0;i<N;i++)p3*=3;
+    
+    for(h=0;h<p3;h++){
+       x=h;
+       for(j=0;j<N;j++){d2[j]=x%3;x/=3;}
+       cnt=0;
+       for(i=0;i<N;i++){
+	   T[0]=0;T[1]=0;T[2]=0;
+	   for(j=0;j<N;j++){
+	       res=a[i][j]+d2[j];
+	       if(res>=3)res-=3;
+	       T[res]++;
+	   }
+	   
+	   if(T[0]<T[1])m=T[1];else m=T[0];
+	   if(m<T[2])m=T[2];
+	   cnt+=m;
+       }
+       if(cnt>opt)opt=cnt;
+    }
+    return opt;
+}
+
+int main(void){
+  
+    int i,j,v,rec=N*N+1;
+    long long int IT=0;
+    
+    //for(i=0;i<N;i++)for(j=0;j<N;j++){scanf("%d",&a[i][j]);a[i][j]%=3;}printf("opt=%d;\n",opt());
+    
+    time_t sec=time(NULL);
+    srand(time(NULL));
+    for(IT=0;;IT++){
+        for(i=0;i<N;i++)for(j=0;j<N;j++)a[i][j]=rand()%3;
+	v=opt();
+	if(v<rec){
+	  rec=v;
+	  printf("rec=%d;time=%ld sec.iter=%lld;\n",rec,time(NULL)-sec,IT);
+	  for(i=0;i<N;i++){for(j=0;j<N;j++)printf("%3d",a[i][j]+1);printf("\n");}
+	}
+    }
+    printf("ans=%d;\n",opt());
+    
+    return 0;
+}
+----------
+Hi!
+
+To get a star:
+
+  1  1  1  1  1  1  1  1
+  1  3  3  3  1  2  2  1
+  1  3  2  3  2  1  3  1
+  1  3  1  2  3  3  1  2
+  1  2  1  3  3  2  2  2
+  1  2  3  2  1  3  3  2
+  1  2  3  1  2  1  2  3
+  1  1  2  2  2  2  3  3
+
+you can get at most 36 marks for this initial configuration. In my search we perturbate the matrix: if you find a "good" matrix (say the maximal number of marks is m) then in each fixed row/column try all 3^N different watches to see if this gives another "good" matrix, if yes (say: the max. number of marks is at most m+1), then save this matrix. With some precomputation we can do this in O(N*9^N) time. At eah step we select the best unexamined matrix.
+
+But in this search you will get many "similar" matrix: observe that we can set the matrix that the first row and column contains only 1, because we can reach this state with some number of adjusts on the rows and columns (the opt. number of marks won't change), furthermore we can sort the rows in a lex. way (the most significant digit is the last term in the row). The above "canonical matrix" comes from such a search, for me it takes roughly 1 minute to find the first such matrix. (after that it is producing matrixes for m=36 marks at a much higher speed).
