@@ -1,0 +1,85 @@
+Hi!
+
+One solution:
+AN*SAWN+ASS*TAT+WOO*SAW=WATSON
+
+The unique solution of the puzzle is: 
+'W'=8
+'A'=4
+'T'=2
+'S'=5
+'O'=6
+'N'=7
+and for this the equation is: 47*5487+455*242+866*548=842567
+
+See my attached code to generate random solutions for the puzzle (it needs a words.txt file, in each line one English word, using lowercase letters.), where we search for 2X4+3X3+3X3=watson puzzles.
+
+----------
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+char WORD[]="watson";
+
+int main(void){
+  
+    int test,i,len,n,i1,i2,i3,i4,i5,i6,d1,d2,d3,d4,d5,d6,v1,v2,v3,v4,v5,v6,j,ns,h,x,used[10],sol,val[26],digit;
+    char w[128],u[2000][8];
+    FILE *in;
+    in=fopen("words.txt","r");
+    
+    n=0;
+    while(fscanf(in,"%s",w)!=EOF){
+      
+         test=1;
+	 len=strlen(w);
+	 for(i=0;i<len;i++)
+	     if(w[i]!='w'&&w[i]!='a'&&w[i]!='t'&&w[i]!='s'&&w[i]!='o'&&w[i]!='n')test=0;
+	 
+	     if(test){
+	       printf("%s\n",w);
+	       strcpy(u[n],w);
+	       n++;}
+    }
+    
+    // 2X4+3X3+3X3=watson
+    printf("n=%d\n",n);
+    int cnt=0,T[200000];
+    for(i=100000;i<1000000;i++){
+        test=1;
+	x=i;
+	for(j=0;j<10;j++)used[j]=0;
+	for(j=0;j<6;j++){digit=x%10;x/=10;if(used[digit])test=0;used[digit]=1;}
+        if(test)T[cnt++]=i;}
+    printf("cnt=%d;\n",cnt);
+    
+    srand(time(NULL));
+    while(1){
+      i1=rand()%n;if(strlen(u[i1])==2){
+      i2=rand()%n;if(strlen(u[i2])==4){
+      i3=rand()%n;if(strlen(u[i3])==3){
+      i4=rand()%n;if(strlen(u[i4])==3){
+      i5=rand()%n;if(strlen(u[i5])==3){
+      i6=rand()%n;if(strlen(u[i6])==3){
+
+      ns=0;
+      for(h=0;ns<2&&h<cnt;h++){
+	  x=T[h];
+	  for(i=5;i>=0;i--){val[WORD[i]-'a']=x%10;x/=10;}
+	  
+	  v1=10*val[u[i1][0]-'a']+val[u[i1][1]-'a'];
+	  v2=1000*val[u[i2][0]-'a']+100*val[u[i2][1]-'a']+10*val[u[i2][2]-'a']+val[u[i2][3]-'a'];
+	  v3=100*val[u[i3][0]-'a']+10*val[u[i3][1]-'a']+val[u[i3][2]-'a'];
+	  v4=100*val[u[i4][0]-'a']+10*val[u[i4][1]-'a']+val[u[i4][2]-'a'];
+	  v5=100*val[u[i5][0]-'a']+10*val[u[i5][1]-'a']+val[u[i5][2]-'a'];
+	  v6=100*val[u[i6][0]-'a']+10*val[u[i6][1]-'a']+val[u[i6][2]-'a'];
+
+	  if(v1*v2+v3*v4+v5*v6==T[h]&&v1>=10&&v2>=1000&&v3>=100&&v4>=100&&v5>=100&&v6>=100){ns++;sol=T[h];}}
+	  
+      if(ns==1){printf("%sX%s+%sX%s+%sX%s=watson; solution=%d;\n",u[i1],u[i2],u[i3],u[i4],u[i5],u[i6],sol);}
+    }}}}}}}
+    
+   return 0;
+}
