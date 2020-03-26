@@ -1,0 +1,60 @@
+Hi!
+
+The prime factorization of n1 and n2:
+n1=27409442019512990822647850170314237623576356233289777*1013209076077649209484940814946799145391416348710836269949
+n2=97015113058097176690586226108597571924676074369837*1013209076077649209484940814946799145391416348710836269949
+
+Let n1 the first number, n2 the second, n3 the third, that we have to factorize.
+Then we can easily check that g=gcd(n1,n2)>1, (here g=1013209076077649209484940814946799145391416348710836269949)
+and g<n1, so g is a non-trivial factor of n1, furthermore g and n1/g are (distinct) primes (as Pari-Gp proves it for example), so n1=g*(n1/g) is the (unique) prime factorization of n1. Moreover n2/g is also prime, hence we have got the prime factorization of n2 also.
+---------
+Hi!
+
+To get star, the only remaining factorization:
+n3=459204260897478908239259636478617449777306089311*3076048694171659720381726519691214280505664619002804392489
+
+This factorization took roughly 83 minutes on an 8 threaded Core-i7 processor using the free yafu (see: https://sourceforge.net/projects/yafu/ )
+with siqs (self initialized quadratic sieve), though with gnfs (general number field sieve) it would be even faster. We can check with Pari-Gp, that the listed factors of n3: P48 and P58 are primes. See yafu_out.txt for the screen output.
+---------
+root@gerbicz:/home/gerbicz/yafu-1.34# ./yafu -threads 8
+
+
+03/27/17 18:21:25 v1.34.5 @ gerbicz, System/Build Info: 
+Using GMP-ECM 6.4.4, Powered by GMP 5.1.1
+detected Intel(R) Core(TM) i7-6700 CPU @ 3.40GHz
+detected L1 = 32768 bytes, L2 = 8388608 bytes, CL = 64 bytes
+measured cpu frequency ~= 3408.041440
+using 20 random witnesses for Rabin-Miller PRP checks
+
+===============================================================
+======= Welcome to YAFU (Yet Another Factoring Utility) =======
+=======             bbuhrow@gmail.com                   =======
+=======     Type help at any time, or quit to quit      =======
+===============================================================
+cached 78498 primes. pmax = 999983
+
+
+>> siqs(1412534667091752138605679066750993949837793629454397369052717798704788621599573184763086599428517731585079)
+
+
+starting SIQS on c106: 1412534667091752138605679066750993949837793629454397369052717798704788621599573184763086599428517731585079
+
+==== sieving in progress ( 8 threads):  166400 relations needed ====
+====            Press ctrl-c to abort and save state            ====
+167232 rels found: 40662 full + 126570 from 2446701 partial, (507.87 rels/sec)
+
+failure to equate relation
+Q = 464035496398447306358486852064800250428908343102885489229677777682380313353134528552931757404271917287479, RHS = 67075784615543719825199384719290710578192796573452699377593040293135152355596710024730274311533381687
+failure to equate relation
+Q = 1400761193630114919434596514995591045819154818628057347077866311089850238702231465732250432366956495854995, RHS = 180558180598129067676884195149919589058201176386625715984500217408261083002426785825810634573511744915
+SIQS elapsed time = 4974.2682 seconds.
+
+
+***factors found***
+
+P48 = 459204260897478908239259636478617449777306089311
+P58 = 3076048694171659720381726519691214280505664619002804392489
+
+ans = 1
+
+>> 
