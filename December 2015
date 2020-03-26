@@ -1,0 +1,24 @@
+Hi!
+
+One possible solution:
+
+f(n)=floor(11907902993637583460401784351683479659968302943746972146294172790705\
+4928418530412832458167711766069940138084797534170215530378805975846514644786016\
+3282670874979358450507074355003169887209851337876725924552910048393716607711905\
+5192063528868978116116583198954098383867776402733017917667129497085323763123943\
+2458750487992759625782408929991296387405298899013109002920858210884654592496869\
+5972742383249409074845962898165313337733417708038626691500520475919285329243834\
+2505727864733803738986208875283632308720937422254044484931625789616925760581501\
+0047714280761639043072/256^n)%256
+
+(here floor is the floor function, % is the modulo operation, '\' is linebreak to avoid very long line, not part of the forumla)
+
+so the f formula is in the form of f(n)=floor(c/256^n)%256, where c is an integer constant. Used 4 operations: one integer floor, one division, one exponentiation, and one modulo operation. In general for any G:H->H (where H={0,1,..,(L-1)}) function we can find a 4 operations formula, just set c=sum(i=0,L-1,G(i)*L^i) and use f(n)=floor(c/L^n)%L, then it is easy to see that f(n)=G(n) for every 0<=n<L.
+
+In the original problem we can use L=256, and G(n)=0 if n is not an EBCDIC letter's value. Using the character sets a short Pari/Gp code for the G function, and then the trivial sum for c:
+
+G(x)=if(x>=129&&x<=137,return(x-32),if(x>=145&&x<=153,return(x-39),\
+if(x>=162&&x<=169,return(x-47),if(x>=193&&x<=201,return(x-128),\
+if(x>=209&&x<=217,return(x-135),if(x>=226&&x<=233,return(x-143),return(0)))))))
+
+c=sum(i=0,255,G(i)*256^i)
