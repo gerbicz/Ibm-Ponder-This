@@ -1,0 +1,72 @@
+Hi!
+
+N=78 and one optimal solution is reached with number of people 2,3,5,8,16,24,54,78 in the multi-person teams. See my solution in the attached c code.
+
+It is clear that if a1<=a2...<=a_k in the multi-person teams then a_k<=2^k is true: see the awards with N,N-1,...,N-2^k+1 teams, if a_k>2^k, then we can't use a_k and larger teams in that distribution (the total number of people in the teams would be larger than N), and in this case we have less than 2^k choices to select the teams (we select a_i or not for i=1,..,k-1), but we need 2^k choices, contradiction.
+
+If we see the 1 team award we get that a_8=N, and using the above idea a_1=2. We iterate on all above cases, using the following ideas:
+1. obviously we use a_8 only in the 1 team distribution
+2. if there are s people in b teams, then we have to use N-s single person teams, giving N-s+b=N-(s-b) teams, note that this is only true if N>=s.
+3. if k is the smallest number that is not reached, where k=s-b, then N-k=1, so N=k+1 as the only remaining case that we have not considered is that when we use a_8 (the largest team), and use no other teams.
+
+----------
+
+#include <stdio.h>
+
+#define NUM 8
+int main(void){
+  
+    int i,j,pow2,k,t,x,opt,opt2,good,P,nteams,bitcnt[257],S[257],found[257];
+    int i1,i2,i3,i4,i5,i6,i7,i8;
+    
+    bitcnt[0]=0;
+    for(i=1;i<=256;i++)bitcnt[i]=(i&1)+bitcnt[i>>1];
+    
+    P=1<<(NUM-1);
+    opt=0;
+    for(i1=2;i1<=2;i1++)
+      for(i2=i1;i2<=4;i2++)
+	for(i3=i2;i3<=8;i3++)
+	  for(i4=i3;i4<=16;i4++)
+	  for(i5=i4;i5<=32;i5++)
+	  for(i6=i5;i6<=64;i6++)
+	  for(i7=i6;i7<=128;i7++){
+	    int a[]={i1,i2,i3,i4,i5,i6,i7};
+	    S[0]=0;
+	    for(i=0;i<NUM-1;i++){
+	       x=a[i];
+	       pow2=1<<i;
+	       for(j=0;j<pow2;j++)S[j+pow2]=S[j]+x;
+	    }
+	    for(i=P;i>=0;i--)found[i]=0;
+	    for(i=0;i<P;i++){
+	        t=S[i]-bitcnt[i];
+		if(t<=256)found[t]=1;
+	    }
+	    for(k=0;found[k];k++);
+	    
+	    if(k+1>opt){
+	      for(i8=i7;i8<=256;i8++){
+		 opt2=i8;
+		 int b[]={i1,i2,i3,i4,i5,i6,i7,i8};
+		 S[0]=0;
+		 for(i=0;i<NUM;i++){
+		     x=b[i];pow2=1<<i;
+		     for(j=0;j<pow2;j++)S[j+pow2]=S[j]+x;
+		 }
+		 for(i=1;i<=opt2;i++)found[i]=0;
+		 for(i=0;i<2*P;i++){
+		     if(S[i]<=opt2){
+		       nteams=bitcnt[i]+opt2-S[i];
+		       if(nteams>=1&&nteams<=opt2)found[nteams]=1;
+		     }
+		 }
+		 good=1;
+		 for(i=1;i<=opt2;i++)if(!found[i]){good=0;break;}
+		 if(good&&opt2>opt){
+	           opt=opt2;
+	           printf("N=%d;%d,%d,%d,%d,%d,%d,%d,%d\n",opt,i1,i2,i3,i4,i5,i6,i7,i8);
+	    }}}}
+	    
+	    return 0;
+}
