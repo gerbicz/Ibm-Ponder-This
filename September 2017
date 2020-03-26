@@ -1,0 +1,1360 @@
+Hi!
+
+The answer is: there are 96 Fisher configurations for foul mates for Black in the shortest way (2 moves).
+
+As written there are 960 Fisher configurations, we need to consider at most 5 moves (if after the 4 moves, there is no move for White in the 5th move, then Black has given foul mate). Since the number of moves is so small we can do a brute force search, with a small speedup we can consider only those 4th move (Black's 2nd move) in that Black has given a check, actually a checkmate, and we observe this at White can't make his 3rd move.
+
+In each depth we make all possible valid move for the given color, so we can't take off king or our piece, or move to the same place, or we don't put our king to a chess. We can omit castle and en passant, since with only 4 total moves they can't make those. The piece's value range from 1 to 6 for White, and (-1) to (-6) to Black, for example White pawn=1, and Black pawn=-1.
+
+For each good configuration the code prints a valid foul mate (giving 5 boards). Ofcouse for one configuration there could be more than one solution, we give only one.
+
+See chess3.c for my c code! The full search took about 400 seconds on one core.
+-----------
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <time.h>
+
+#define N 8
+#define N2 64   // N^2
+#define N4 4096 // N^4
+#define maxdepth 6
+
+int board[N][N];
+
+#define PAWN   1
+#define ROOK   2
+#define KNIGHT 3
+#define BISHOP 4
+#define QUEEN  5
+#define KING   6
+
+#define WHITE 1
+#define BLACK (-1)
+// black piece's value<0, example BLACK ROOK=-2
+
+int chess(int);
+
+int iabs(int x){if(x>=0)return x;return (-x);}
+
+int SG(int v){
+    if(v>0)return 1;
+    if(v==0)return 0;
+    return (-1);
+}
+
+int empty(int x0,int y0,int x1,int y1){
+    
+    // is there a piece on the (x0,y0)-(x1,y1) line?
+    int dx=SG(x1-x0),dy=SG(y1-y0);
+    int x=x0+dx,y=y0+dy;
+    
+    for(;x!=x1||y!=y1;x+=dx,y+=dy)
+        if(board[x][y]!=0)return 0;
+    return 1;
+}
+
+int make_a_move(int color,int x0,int y0,int x1,int y1){
+// return by 0 if not a valid move
+
+    if(board[x0][y0]*color<=0)return 0;
+    
+    int ty=iabs(board[x0][y0]);
+    int dx=x1-x0;
+    int dy=y1-y0;
+    int c2=board[x1][y1];
+    
+    if(iabs(c2)==KING)return 0;// can't take off a king
+    if(c2*color>0)return 0;// can't take off our piece
+    if(x0==x1&&y0==y1)return 0;//same place not a valid move
+    
+    if(ty==PAWN){
+        if(color==WHITE){
+            if(dx==0&&(dy==1||(dy==2&&y0==1)));
+            else if(dx==1&&iabs(dy)==1);
+            else return 0;
+        }
+        else{
+            if(dx==0&&(dy==-1||(dy==-2&&y0==N-2)));
+            else if(dx==-1&&iabs(dy)==1);
+            else return 0;
+        }
+        
+        if(iabs(dx)==1){
+           if(c2==0)return 0;
+        }
+        
+        if(dx==0&&iabs(dy)==2&&(empty(x0,y0,x1,y1)==0||board[x1][y1]!=0))return 0;
+        if(dx==1&&iabs(dy)==1&&board[x1][y1]!=0)return 0;
+    }
+    else if(ty==ROOK){
+        if(dx!=0&&dy!=0)return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==KNIGHT){
+        if(dx*dx+dy*dy!=5)return 0;
+    }
+    else if(ty==BISHOP){
+        if(iabs(dx)!=iabs(dy))return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==QUEEN){
+        if(dx==0||dy==0||iabs(dx)==iabs(dy));
+        else return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==KING){
+        if(dx*dx+dy*dy>2)return 0;
+    }
+    
+    int tmp=board[x1][y1];
+    board[x1][y1]=board[x0][y0];
+    board[x0][y0]=0;
+    
+    if(chess(color)){
+        board[x0][y0]=board[x1][y1];
+        board[x1][y1]=tmp;
+        return 0;// can't move to chess
+    }
+    
+    return 1;
+}
+
+
+int chess(int color){
+// check if color's king is in chess or not    
+    int i,j,x0,y0,x1,y1,ty,dx,dy;
+    
+    for(i=0;i<N;i++)for(j=0;j<N;j++)// find king
+        if(board[i][j]==color*KING){x1=i;y1=j;}
+    
+    for(x0=0;x0<N;x0++)for(y0=0;y0<N;y0++)if(color*board[x0][y0]<0){
+        ty=iabs(board[x0][y0]);
+        dx=x1-x0;
+        dy=y1-y0;
+        
+        if(ty==PAWN){
+            if(color==BLACK){if(iabs(x1-x0)==1&&y1==y0+1)return 1;}
+            if(color==WHITE){if(iabs(x1-x0)==1&&y1==y0-1)return 1;}
+        }
+        else if(ty==ROOK){
+            if((dx==0||dy==0)&&empty(x0,y0,x1,y1))return 1;
+        }
+        else if(ty==KNIGHT){
+            if(dx*dx+dy*dy==5)return 1;
+        }
+        else if(ty==BISHOP){
+            if(iabs(dx)==iabs(dy)&&empty(x0,y0,x1,y1))return 1;
+        }
+        else if(ty==QUEEN){
+            if((dx==0||dy==0||iabs(dx)==iabs(dy))&&empty(x0,y0,x1,y1))return 1;
+        }
+    }
+    return 0;// no chess
+}
+
+
+        
+int B[maxdepth][N][N];
+void draw_board(int depth){
+    
+    int i,j;
+    printf("board:\n");
+    for(j=N-1;j>=0;j--){
+        for(i=0;i<N;i++){
+            int ty=B[depth][i][j];
+            if(ty==0)printf(".");
+            else if(iabs(ty)==PAWN)  {if(ty>0)printf("P");else printf("p");}
+            else if(iabs(ty)==ROOK)  {if(ty>0)printf("R");else printf("r");}
+            else if(iabs(ty)==KNIGHT){if(ty>0)printf("N");else printf("n");}
+            else if(iabs(ty)==BISHOP){if(ty>0)printf("B");else printf("b");}
+            else if(iabs(ty)==QUEEN) {if(ty>0)printf("Q");else printf("q");}
+            else if(iabs(ty)==KING)  {if(ty>0)printf("K");else printf("k");}
+        }
+        printf("\n");
+    }
+    return;
+}
+
+int main(void){
+    
+    int ans=0,nfisher=0;
+    int x0,x1,y0,y1,I;
+    int i,j,tmp,test,v,cnt[7],bc[2],r0,r1,c2,color;
+    int found_mate,depth,backtrack;
+    int pos[6];
+    time_t sec=time(NULL);
+    
+    for(I=0;I<390625;I++){
+        tmp=I;
+        for(i=0;i<7;i++)cnt[i]=0;
+        test=1;
+        for(i=0;i<N;i++){
+            v=2+(tmp%5);
+            board[i][0]=v;tmp/=5;
+            cnt[v]++;
+        }
+        
+        if(cnt[2]==2&&cnt[3]==2&&cnt[4]==2&&cnt[5]==1&&cnt[6]==1){
+           for(i=0;i<N&&board[i][0]!=ROOK;i++);
+           r0=i;i++;
+           for(;i<N&&board[i][0]!=ROOK;i++);
+           r1=i;
+           for(i=0;i<N&&board[i][0]!=KING;i++);
+           if(r0>i||r1<i)test=0;
+           bc[0]=0;bc[1]=0;
+           for(i=0;i<N;i++)if(board[i][0]==BISHOP)bc[i%2]++;
+           if(bc[0]==2||bc[1]==2)test=0;
+           
+           if(test){
+               nfisher++;
+               
+               for(i=0;i<N;i++){
+                   board[i][1]=PAWN;
+                   board[i][N-2]=-PAWN;
+                   for(j=2;j<N-2;j++)board[i][j]=0;
+               }
+               for(i=0;i<N;i++)board[i][N-1]=-board[i][0];
+               
+               
+               depth=1;
+               found_mate=0;
+               pos[1]=-1;
+               for(i=0;i<N;i++)for(j=0;j<N;j++)B[0][i][j]=board[i][j];
+               while(found_mate==0&&depth>0){
+                   pos[depth]++;
+                   backtrack=0;
+                   if(pos[depth]>=N4){
+                       backtrack=1;
+                       if(depth==5){
+                           for(i=0;i<depth;i++){printf("i=%d\n",i);draw_board(i);}
+                           found_mate=1;
+                       }
+                   }
+                   else{
+                       v=pos[depth]/N2;
+                       x0=v%N;
+                       y0=v/N;
+                       color=B[depth-1][x0][y0];
+                       if(depth&1)c2=WHITE;else c2=BLACK;
+                       
+                       if(color*c2<=0){
+                           pos[depth]-=pos[depth]%N2;
+                           pos[depth]+=N2-1;
+                       }
+                       else{
+                           x1=pos[depth]%N;
+                           y1=(pos[depth]/N)%N;
+                           for(i=0;i<N;i++)for(j=0;j<N;j++)board[i][j]=B[depth-1][i][j];
+                           if(make_a_move(c2,x0,y0,x1,y1)){
+                               if(depth<=3||(depth==4&&chess(-c2))){
+                                  for(i=0;i<N;i++)for(j=0;j<N;j++)B[depth][i][j]=board[i][j];
+                                  depth++;
+                                  pos[depth]=-1;
+                              }
+                              else if(depth==5)depth--;
+                           }
+                       }
+                   }
+                   if(backtrack)depth--;
+               }
+               printf("mate=%d;\n",found_mate);
+               if(found_mate)ans++;
+               printf("Count nfisher=%d;ans=%d;time=%ld sec.\n",nfisher,ans,time(NULL)-sec);
+           }
+        }
+    }
+    printf("nfisher=%d;\nans=%d;time=%ld sec.",nfisher,ans,time(NULL)-sec);
+    return 0;
+}
+------------
+Hi!
+
+My corrected answer: 88 good Fisher configurations.
+There were errors at pawn move's code.
+------------
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <time.h>
+
+#define N 8
+#define N2 64   // N^2
+#define N4 4096 // N^4
+#define maxdepth 6
+
+int board[N][N];
+
+#define PAWN   1
+#define ROOK   2
+#define KNIGHT 3
+#define BISHOP 4
+#define QUEEN  5
+#define KING   6
+
+#define WHITE 1
+#define BLACK (-1)
+// black piece's value<0, example BLACK ROOK=-2
+
+int chess(int);
+
+int iabs(int x){if(x>=0)return x;return (-x);}
+
+int SG(int v){
+    if(v>0)return 1;
+    if(v==0)return 0;
+    return (-1);
+}
+
+int empty(int x0,int y0,int x1,int y1){
+    
+    // is there a piece on the (x0,y0)-(x1,y1) line?
+    int dx=SG(x1-x0),dy=SG(y1-y0);
+    int x=x0+dx,y=y0+dy;
+    
+    for(;x!=x1||y!=y1;x+=dx,y+=dy)
+        if(board[x][y]!=0)return 0;
+    return 1;
+}
+
+int make_a_move(int color,int x0,int y0,int x1,int y1){
+// return by 0 if not a valid move
+
+    if(board[x0][y0]*color<=0)return 0;
+    
+    int ty=iabs(board[x0][y0]);
+    int dx=x1-x0;
+    int dy=y1-y0;
+    int c2=board[x1][y1];
+    
+    if(iabs(c2)==KING)return 0;// can't take off a king
+    if(c2*color>0)return 0;// can't take off our piece
+    if(x0==x1&&y0==y1)return 0;//same place not a valid move
+    
+    if(ty==PAWN){
+        if(color==WHITE){
+            if(dx==0&&(dy==1||(dy==2&&y0==1)));
+            else if(iabs(dx)==1&&dy==1);
+            else return 0;
+        }
+        else{
+            if(dx==0&&(dy==-1||(dy==-2&&y0==N-2)));
+            else if(iabs(dx)==1&&dy==-1);
+            else return 0;
+        }
+        
+        if(iabs(dx)==1){
+           if(c2==0)return 0;
+        }
+        
+        if(dx==0&&iabs(dy)==2&&(empty(x0,y0,x1,y1)==0||board[x1][y1]!=0))return 0;
+        if(dx==0&&iabs(dy)==1&&board[x1][y1]!=0)return 0;
+    }
+    else if(ty==ROOK){
+        if(dx!=0&&dy!=0)return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==KNIGHT){
+        if(dx*dx+dy*dy!=5)return 0;
+    }
+    else if(ty==BISHOP){
+        if(iabs(dx)!=iabs(dy))return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==QUEEN){
+        if(dx==0||dy==0||iabs(dx)==iabs(dy));
+        else return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==KING){
+        if(dx*dx+dy*dy>2)return 0;
+    }
+    
+    int tmp=board[x1][y1];
+    board[x1][y1]=board[x0][y0];
+    board[x0][y0]=0;
+    
+    if(chess(color)){
+        board[x0][y0]=board[x1][y1];
+        board[x1][y1]=tmp;
+        return 0;// can't move to chess
+    }
+    
+    return 1;
+}
+
+
+int chess(int color){
+// check if color's king is in chess or not    
+    int i,j,x0,y0,x1,y1,ty,dx,dy;
+    
+    for(i=0;i<N;i++)for(j=0;j<N;j++)// find king
+        if(board[i][j]==color*KING){x1=i;y1=j;}
+    
+    for(x0=0;x0<N;x0++)for(y0=0;y0<N;y0++)if(color*board[x0][y0]<0){
+        ty=iabs(board[x0][y0]);
+        dx=x1-x0;
+        dy=y1-y0;
+        
+        if(ty==PAWN){
+            if(color==BLACK){if(iabs(x1-x0)==1&&y1==y0+1)return 1;}
+            if(color==WHITE){if(iabs(x1-x0)==1&&y1==y0-1)return 1;}
+        }
+        else if(ty==ROOK){
+            if((dx==0||dy==0)&&empty(x0,y0,x1,y1))return 1;
+        }
+        else if(ty==KNIGHT){
+            if(dx*dx+dy*dy==5)return 1;
+        }
+        else if(ty==BISHOP){
+            if(iabs(dx)==iabs(dy)&&empty(x0,y0,x1,y1))return 1;
+        }
+        else if(ty==QUEEN){
+            if((dx==0||dy==0||iabs(dx)==iabs(dy))&&empty(x0,y0,x1,y1))return 1;
+        }
+    }
+    return 0;// no chess
+}
+
+
+        
+int B[maxdepth][N][N];
+void draw_board(int depth){
+    
+    int i,j;
+    printf("board:\n");
+    for(j=N-1;j>=0;j--){
+        for(i=0;i<N;i++){
+            int ty=B[depth][i][j];
+            if(ty==0)printf(".");
+            else if(iabs(ty)==PAWN)  {if(ty>0)printf("P");else printf("p");}
+            else if(iabs(ty)==ROOK)  {if(ty>0)printf("R");else printf("r");}
+            else if(iabs(ty)==KNIGHT){if(ty>0)printf("N");else printf("n");}
+            else if(iabs(ty)==BISHOP){if(ty>0)printf("B");else printf("b");}
+            else if(iabs(ty)==QUEEN) {if(ty>0)printf("Q");else printf("q");}
+            else if(iabs(ty)==KING)  {if(ty>0)printf("K");else printf("k");}
+        }
+        printf("\n");
+    }
+    return;
+}
+
+int main(void){
+    
+    int ans=0,nfisher=0;
+    int x0,x1,y0,y1,I;
+    int i,j,tmp,test,v,cnt[7],bc[2],r0,r1,c2,color;
+    int found_mate,depth,backtrack;
+    int pos[6];
+    time_t sec=time(NULL);
+    
+    for(I=0;I<390625;I++){
+        tmp=I;
+        for(i=0;i<7;i++)cnt[i]=0;
+        test=1;
+        for(i=0;i<N;i++){
+            v=2+(tmp%5);
+            board[i][0]=v;tmp/=5;
+            cnt[v]++;
+        }
+        
+        if(cnt[2]==2&&cnt[3]==2&&cnt[4]==2&&cnt[5]==1&&cnt[6]==1){
+           for(i=0;i<N&&board[i][0]!=ROOK;i++);
+           r0=i;i++;
+           for(;i<N&&board[i][0]!=ROOK;i++);
+           r1=i;
+           for(i=0;i<N&&board[i][0]!=KING;i++);
+           if(r0>i||r1<i)test=0;
+           bc[0]=0;bc[1]=0;
+           for(i=0;i<N;i++)if(board[i][0]==BISHOP)bc[i%2]++;
+           if(bc[0]==2||bc[1]==2)test=0;
+           
+           if(test){
+               nfisher++;
+               
+               for(i=0;i<N;i++){
+                   board[i][1]=PAWN;
+                   board[i][N-2]=-PAWN;
+                   for(j=2;j<N-2;j++)board[i][j]=0;
+               }
+               for(i=0;i<N;i++)board[i][N-1]=-board[i][0];
+               
+               
+               depth=1;
+               found_mate=0;
+               pos[1]=-1;
+               for(i=0;i<N;i++)for(j=0;j<N;j++)B[0][i][j]=board[i][j];
+               while(found_mate==0&&depth>0){
+                   pos[depth]++;
+                   backtrack=0;
+                   if(pos[depth]>=N4){
+                       backtrack=1;
+                       if(depth==5){
+                           for(i=0;i<depth;i++){printf("i=%d\n",i);draw_board(i);}
+                           found_mate=1;
+                       }
+                   }
+                   else{
+                       v=pos[depth]/N2;
+                       x0=v%N;
+                       y0=v/N;
+                       color=B[depth-1][x0][y0];
+                       if(depth&1)c2=WHITE;else c2=BLACK;
+                       
+                       if(color*c2<=0){
+                           pos[depth]-=pos[depth]%N2;
+                           pos[depth]+=N2-1;
+                       }
+                       else{
+                           x1=pos[depth]%N;
+                           y1=(pos[depth]/N)%N;
+                           for(i=0;i<N;i++)for(j=0;j<N;j++)board[i][j]=B[depth-1][i][j];
+                           if(make_a_move(c2,x0,y0,x1,y1)){
+                               if(depth<=3||(depth==4&&chess(-c2))){
+                                  for(i=0;i<N;i++)for(j=0;j<N;j++)B[depth][i][j]=board[i][j];
+                                  depth++;
+                                  pos[depth]=-1;
+                              }
+                              else if(depth==5)depth--;
+                           }
+                       }
+                   }
+                   if(backtrack)depth--;
+               }
+               printf("mate=%d;\n",found_mate);
+               if(found_mate)ans++;
+               printf("Count nfisher=%d;ans=%d;time=%ld sec.\n",nfisher,ans,time(NULL)-sec);
+           }
+        }
+    }
+    printf("nfisher=%d;\nans=%d;time=%ld sec.",nfisher,ans,time(NULL)-sec);
+    return 0;
+}
+------------
+Hi!
+
+My updated answer is 91, included castling in the moves.
+See my new code and the screen output!
+------------
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <time.h>
+
+#define N 8
+#define N2 64   // N^2
+#define N4 4096 // N^4
+#define maxdepth 6
+
+int board[N][N];
+int moved[N][N];
+
+#define PAWN   1
+#define ROOK   2
+#define KNIGHT 3
+#define BISHOP 4
+#define QUEEN  5
+#define KING   6
+
+#define WHITE 1
+#define BLACK (-1)
+// black piece's value<0, example BLACK ROOK=-2
+
+int chess(int);
+
+int iabs(int x){if(x>=0)return x;return (-x);}
+
+int SG(int v){
+    if(v>0)return 1;
+    if(v==0)return 0;
+    return (-1);
+}
+
+int validpos(int x,int y){return (x>=0&&x<N&&y>=0&&y<N);}
+
+int empty(int x0,int y0,int x1,int y1){
+    
+    // is there a piece on the (x0,y0)-(x1,y1) line?
+    int dx=SG(x1-x0),dy=SG(y1-y0);
+    int x=x0+dx,y=y0+dy;
+    
+    for(;x!=x1||y!=y1;x+=dx,y+=dy)
+        if(board[x][y]!=0)return 0;
+    return 1;
+}
+
+int make_a_move(int color,int x0,int y0,int x1,int y1,int castle){
+// return by 0 if not a valid move
+// if castle=-1 then do "a-side" castling, if castle=1 then "h-side" castling, if castle=0 then no castling
+    
+    if(castle==0&&board[x0][y0]*color<=0)return 0;
+    
+    int i,j,ty=iabs(board[x0][y0]);
+    int dx=x1-x0;
+    int dy=y1-y0;
+    int c2=board[x1][y1];
+    
+    if(castle==0&&iabs(c2)==KING)return 0;// can't take off a king
+    if(castle==0&&c2*color>0)return 0;// can't take off our piece
+    if(castle==0&&x0==x1&&y0==y1)return 0;//same place not a valid move
+    
+    if(castle!=0){// castling! a or h side
+      int cnt_rooks=0,xr[2],yr[2];
+      for(i=0;i<N;i++)for(j=0;j<N;j++){// find king and rooks
+        if(board[i][j]==color*KING){x0=i;y0=j;}
+        if(board[i][j]==color*ROOK){
+            xr[cnt_rooks]=i;yr[cnt_rooks]=j;
+            cnt_rooks++;
+        }
+      }
+      
+        if(castle==-1){x1=xr[0];y1=yr[0];}
+        else          {x1=xr[1];y1=yr[1];}
+        
+        if(moved[x0][y0]||moved[x1][y1])return 0;
+        
+        int attack[N][N];
+        int cc=1-color;
+        int g,h,i2,j2,xx,yy,DX[8],DY[8];
+        for(i=0;i<N;i++)for(j=0;j<N;j++)attack[i][j]=0;
+        for(i=0;i<N;i++)for(j=0;j<N;j++)if(cc*board[i][j]>0){// for each enemy piece
+            int t=iabs(board[i][j]);
+            if(t==PAWN){
+                // cc=0: (i,j)-> (i+-1,j+1)
+                // cc=1: (i,j)-> (i+-1,j-1)
+                i2=i+1;j2=j+1-2*cc;if(validpos(i2,j2))attack[i2][j2]=1;
+                i2=i-1;            if(validpos(i2,j2))attack[i2][j2]=1;
+            }
+            else if(t==ROOK){
+                DX[0]=0; DY[0]=1;
+                DX[1]=0; DY[1]=-1;
+                DX[2]=1; DY[2]=0;
+                DX[3]=-1;DY[3]=0;
+                for(h=0;h<4;h++){
+                    xx=i+DX[h];yy=j+DY[h];
+                    for(;validpos(xx,yy);xx+=DX[h],yy+=DY[h]){
+                        attack[xx][yy]=1;
+                        if(board[xx][yy]!=0)break;
+                    }
+                }
+            }
+            else if(t==KNIGHT){
+                DX[0]=1; DY[0]=2;
+                DX[1]=1; DY[1]=-2;
+                DX[2]=-1;DY[2]=2;
+                DX[3]=-1;DY[3]=-2;
+                DX[4]=2; DY[4]=1;
+                DX[5]=2; DY[5]=-1;
+                DX[6]=-2;DY[6]=1;
+                DX[7]=-2;DY[7]=-1;
+                for(h=0;h<8;h++){
+                    xx=i+DX[h];
+                    yy=j+DY[h];
+                    if(validpos(xx,yy))attack[xx][yy]=1;
+                }
+            }
+            else if(t==BISHOP){
+                DX[0]=1; DY[0]=1;
+                DX[1]=1; DY[1]=-1;
+                DX[2]=-1;DY[2]=1;
+                DX[3]=-1;DY[3]=-1;
+                for(h=0;h<4;h++){
+                    xx=i+DX[h];yy=j+DY[h];
+                    for(;validpos(xx,yy);xx+=DX[h],yy+=DY[h]){
+                        attack[xx][yy]=1;
+                        if(board[xx][yy]!=0)break;
+                    }
+                }
+            }
+            else if(t==QUEEN){
+                DX[0]=1; DY[0]=1;
+                DX[1]=1; DY[1]=-1;
+                DX[2]=-1;DY[2]=1;
+                DX[3]=-1;DY[3]=-1;
+                DX[4]=1; DY[4]=0;
+                DX[5]=-1;DY[5]=0;
+                DX[6]=0; DY[6]=1;
+                DX[7]=0; DY[7]=-1;
+                for(h=0;h<8;h++){
+                    xx=i+DX[h];yy=j+DY[h];
+                    for(;validpos(xx,yy);xx+=DX[h],yy+=DY[h]){
+                        attack[xx][yy]=1;
+                        if(board[xx][yy]!=0)break;
+                    }
+                }
+            }
+            else if(t==KING){
+                for(g=-1;g<=1;g++)for(h=-1;h<=1;h++){
+                    xx=i+g;yy=j+h;
+                    if(validpos(xx,yy))attack[xx][yy]=1;
+                }
+            }
+        }
+        int fx0,fx1,fy0=y0,fy1=y1;
+        
+        // (x0,y0) to (fx0,fy0): KING
+        // (x1,y1) to (fx1,fy1): ROOK
+        if(castle==-1){fx0=2;fx1=3;}
+        else          {fx0=6;fx1=5;}
+        
+        int delta_x=fx0-x0;
+        xx=x0;yy=y0;
+        for(;;xx+=delta_x){if(attack[xx][yy])return 0;if(xx==fx0)break;}
+        board[x0][y0]=0;
+        board[x1][y1]=0;
+        
+        xx=x0;yy=y0;
+        delta_x=fx0-x0;
+        for(;;xx+=delta_x){if(board[xx][yy]!=0)return 0;if(xx==fx0)break;}
+        
+        xx=x1;yy=y1;
+        delta_x=fx1-x1;
+        for(;;xx+=delta_x){if(board[xx][yy]!=0)return 0;if(xx==fx1)break;}
+        
+        moved[fx0][fy0]=1;
+        moved[fx1][fy1]=1;
+        board[fx0][fy0]=color*KING;
+        board[fx1][fy1]=color*ROOK;
+        return 1;
+    }
+    else if(ty==PAWN){
+        if(color==WHITE){
+            if(dx==0&&(dy==1||(dy==2&&y0==1)));
+            else if(iabs(dx)==1&&dy==1);
+            else return 0;
+        }
+        else{
+            if(dx==0&&(dy==-1||(dy==-2&&y0==N-2)));
+            else if(iabs(dx)==1&&dy==-1);
+            else return 0;
+        }
+        
+        if(iabs(dx)==1){
+           if(c2==0)return 0;
+        }
+        
+        if(dx==0&&iabs(dy)==2&&(empty(x0,y0,x1,y1)==0||board[x1][y1]!=0))return 0;
+        if(dx==0&&iabs(dy)==1&&board[x1][y1]!=0)return 0;
+    }
+    else if(ty==ROOK){
+        if(dx!=0&&dy!=0)return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==KNIGHT){
+        if(dx*dx+dy*dy!=5)return 0;
+    }
+    else if(ty==BISHOP){
+        if(iabs(dx)!=iabs(dy))return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==QUEEN){
+        if(dx==0||dy==0||iabs(dx)==iabs(dy));
+        else return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==KING){
+        if(dx*dx+dy*dy>2)return 0;
+    }
+    
+    int tmp=board[x1][y1];
+    board[x1][y1]=board[x0][y0];
+    board[x0][y0]=0;
+    moved[x1][y1]=1;
+    
+    if(chess(color)){
+        board[x0][y0]=board[x1][y1];
+        board[x1][y1]=tmp;
+        return 0;// can't move to chess
+    }
+    
+    return 1;
+}
+
+
+int chess(int color){
+// check if color's king is in chess or not    
+    int i,j,x0,y0,x1,y1,ty,dx,dy;
+    
+    for(i=0;i<N;i++)for(j=0;j<N;j++)// find king
+        if(board[i][j]==color*KING){x1=i;y1=j;}
+    
+    for(x0=0;x0<N;x0++)for(y0=0;y0<N;y0++)if(color*board[x0][y0]<0){
+        ty=iabs(board[x0][y0]);
+        dx=x1-x0;
+        dy=y1-y0;
+        
+        if(ty==PAWN){
+            if(color==BLACK){if(iabs(x1-x0)==1&&y1==y0+1)return 1;}
+            if(color==WHITE){if(iabs(x1-x0)==1&&y1==y0-1)return 1;}
+        }
+        else if(ty==ROOK){
+            if((dx==0||dy==0)&&empty(x0,y0,x1,y1))return 1;
+        }
+        else if(ty==KNIGHT){
+            if(dx*dx+dy*dy==5)return 1;
+        }
+        else if(ty==BISHOP){
+            if(iabs(dx)==iabs(dy)&&empty(x0,y0,x1,y1))return 1;
+        }
+        else if(ty==QUEEN){
+            if((dx==0||dy==0||iabs(dx)==iabs(dy))&&empty(x0,y0,x1,y1))return 1;
+        }
+    }
+    return 0;// no chess
+}
+
+
+        
+int B[maxdepth][N][N];
+int M[maxdepth][N][N];
+
+void draw_board(int depth){
+    
+    int i,j;
+    printf("board:\n");
+    for(j=N-1;j>=0;j--){
+        for(i=0;i<N;i++){
+            int ty=B[depth][i][j];
+            if(ty==0)printf(".");
+            else if(iabs(ty)==PAWN)  {if(ty>0)printf("P");else printf("p");}
+            else if(iabs(ty)==ROOK)  {if(ty>0)printf("R");else printf("r");}
+            else if(iabs(ty)==KNIGHT){if(ty>0)printf("N");else printf("n");}
+            else if(iabs(ty)==BISHOP){if(ty>0)printf("B");else printf("b");}
+            else if(iabs(ty)==QUEEN) {if(ty>0)printf("Q");else printf("q");}
+            else if(iabs(ty)==KING)  {if(ty>0)printf("K");else printf("k");}
+        }
+        printf("\n");
+    }
+    return;
+}
+
+int main(void){
+    
+    int ans=0,nfisher=0;
+    int x0,x1,y0,y1,I;
+    int i,j,tmp,test,v,cnt[7],bc[2],r0,r1,c2,color;
+    int found_mate,depth,backtrack;
+    int pos[6];
+    time_t sec=time(NULL);
+    
+    for(I=0;I<390625;I++){
+        tmp=I;
+        for(i=0;i<7;i++)cnt[i]=0;
+        test=1;
+        for(i=0;i<N;i++){
+            v=2+(tmp%5);
+            board[i][0]=v;tmp/=5;
+            cnt[v]++;
+        }
+        
+        if(cnt[2]==2&&cnt[3]==2&&cnt[4]==2&&cnt[5]==1&&cnt[6]==1){
+           for(i=0;i<N&&board[i][0]!=ROOK;i++);
+           r0=i;i++;
+           for(;i<N&&board[i][0]!=ROOK;i++);
+           r1=i;
+           for(i=0;i<N&&board[i][0]!=KING;i++);
+           if(r0>i||r1<i)test=0;
+           bc[0]=0;bc[1]=0;
+           for(i=0;i<N;i++)if(board[i][0]==BISHOP)bc[i%2]++;
+           if(bc[0]==2||bc[1]==2)test=0;
+           
+           if(test){
+               nfisher++;
+               
+               for(i=0;i<N;i++){
+                   board[i][1]=PAWN;
+                   board[i][N-2]=-PAWN;
+                   for(j=2;j<N-2;j++)board[i][j]=0;
+               }
+               for(i=0;i<N;i++)board[i][N-1]=-board[i][0];
+               
+               
+               depth=1;
+               found_mate=0;
+               pos[1]=-1;
+               for(i=0;i<N;i++)for(j=0;j<N;j++){
+                   B[0][i][j]=board[i][j];
+                   M[0][i][j]=0;// not moved the pieces
+               }
+               while(found_mate==0&&depth>0){
+                   pos[depth]++;
+                   backtrack=0;
+                   if(pos[depth]>=N4+4){
+                       backtrack=1;
+                       if(depth==5){
+                           for(i=0;i<depth;i++){printf("i=%d\n",i);draw_board(i);}
+                           found_mate=1;
+                       }
+                   }
+                   else{
+                       int castle;
+                       if(pos[depth]<N4){
+                          v=pos[depth]/N2;
+                          x0=v%N;
+                          y0=v/N;
+                          color=B[depth-1][x0][y0];
+                          if(depth&1)c2=WHITE;else c2=BLACK;
+                          castle=0;
+                       }
+                       else{
+                            color=-1+2*((pos[depth]-N4)%2);
+                           castle=-1+2*((pos[depth]-N4)/2);
+                       }
+                       
+                       if(pos[depth]>=N4){x0=0;y0=0;x1=0;x1=0;}// fake
+                       
+                       if(castle==0&&color*c2<=0){
+                           pos[depth]-=pos[depth]%N2;
+                           pos[depth]+=N2-1;
+                       }
+                       else{
+                           if(castle==0){
+                             x1=pos[depth]%N;
+                             y1=(pos[depth]/N)%N;
+                           }
+                           for(i=0;i<N;i++)for(j=0;j<N;j++){
+                               board[i][j]=B[depth-1][i][j];
+                               moved[i][j]=M[depth-1][i][j];
+                           }
+                           if(make_a_move(c2,x0,y0,x1,y1,castle)){
+                               if(depth<=3||(depth==4&&chess(-c2))){
+                                  for(i=0;i<N;i++)for(j=0;j<N;j++){
+                                      B[depth][i][j]=board[i][j];
+                                      M[depth][i][j]=moved[i][j];
+                                  }
+                                  depth++;
+                                  pos[depth]=-1;
+                              }
+                              else if(depth==5)depth--;
+                           }
+                       }
+                   }
+                   if(backtrack)depth--;
+               }
+               printf("mate=%d;\n",found_mate);
+               if(found_mate)ans++;
+               printf("Count nfisher=%d;ans=%d;time=%ld sec.\n",nfisher,ans,time(NULL)-sec);
+           }
+        }
+    }
+    printf("nfisher=%d;\nans=%d;time=%ld sec.",nfisher,ans,time(NULL)-sec);
+    return 0;
+}
+------------
+(omitted screen output)
+------------
+Hi!
+
+There was an error in castling part, there are 92 good Fischer configurations.
+
+See my updated code/text.
+------------
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <time.h>
+
+#define N 8
+#define N2 64   // N^2
+#define N4 4096 // N^4
+#define maxdepth 6
+
+int board[N][N];
+int moved[N][N];
+
+#define PAWN   1
+#define ROOK   2
+#define KNIGHT 3
+#define BISHOP 4
+#define QUEEN  5
+#define KING   6
+
+#define WHITE 1
+#define BLACK (-1)
+// black piece's value<0, example BLACK ROOK=-2
+
+int chess(int);
+
+int iabs(int x){if(x>=0)return x;return (-x);}
+
+int SG(int v){
+    if(v>0)return 1;
+    if(v==0)return 0;
+    return (-1);
+}
+
+int validpos(int x,int y){return (x>=0&&x<N&&y>=0&&y<N);}
+
+int empty(int x0,int y0,int x1,int y1){
+    
+    // is there a piece on the (x0,y0)-(x1,y1) line?
+    int dx=SG(x1-x0),dy=SG(y1-y0);
+    int x=x0+dx,y=y0+dy;
+    
+    for(;x!=x1||y!=y1;x+=dx,y+=dy)
+        if(board[x][y]!=0)return 0;
+    return 1;
+}
+
+int make_a_move(int color,int x0,int y0,int x1,int y1,int castle){
+// return by 0 if not a valid move
+// if castle=-1 then do "a-side" castling, if castle=1 then "h-side" castling, if castle=0 then no castling
+    
+    if(castle==0&&board[x0][y0]*color<=0)return 0;
+    
+    int i,j,ty=iabs(board[x0][y0]);
+    int dx=x1-x0;
+    int dy=y1-y0;
+    int c2=board[x1][y1];
+    
+    if(castle==0&&iabs(c2)==KING)return 0;// can't take off a king
+    if(castle==0&&c2*color>0)return 0;// can't take off our piece
+    if(castle==0&&x0==x1&&y0==y1)return 0;//same place not a valid move
+    
+    if(castle!=0){// castling! a or h side
+      int cnt_rooks=0,xr[2],yr[2];
+      for(i=0;i<N;i++)for(j=0;j<N;j++){// find king and rooks
+        if(board[i][j]==color*KING){x0=i;y0=j;}
+        if(board[i][j]==color*ROOK){
+            xr[cnt_rooks]=i;yr[cnt_rooks]=j;
+            cnt_rooks++;
+        }
+      }
+      
+        if(castle==-1){x1=xr[0];y1=yr[0];}
+        else          {x1=xr[1];y1=yr[1];}
+        
+        if(moved[x0][y0]||moved[x1][y1])return 0;
+        
+        int attack[N][N];
+        int cc=-color;
+        int g,h,i2,j2,xx,yy,DX[8],DY[8];
+        for(i=0;i<N;i++)for(j=0;j<N;j++)attack[i][j]=0;
+        for(i=0;i<N;i++)for(j=0;j<N;j++)if(cc*board[i][j]>0){// for each enemy piece
+            int t=iabs(board[i][j]);
+            if(t==PAWN){
+                // cc=1 : (i,j)-> (i+-1,j+1)
+                // cc=-1: (i,j)-> (i+-1,j-1)
+                i2=i+1;j2=j+cc;if(validpos(i2,j2))attack[i2][j2]=1;
+                i2=i-1;        if(validpos(i2,j2))attack[i2][j2]=1;
+            }
+            else if(t==ROOK){
+                DX[0]=0; DY[0]=1;
+                DX[1]=0; DY[1]=-1;
+                DX[2]=1; DY[2]=0;
+                DX[3]=-1;DY[3]=0;
+                for(h=0;h<4;h++){
+                    xx=i+DX[h];yy=j+DY[h];
+                    for(;validpos(xx,yy);xx+=DX[h],yy+=DY[h]){
+                        attack[xx][yy]=1;
+                        if(board[xx][yy]!=0)break;
+                    }
+                }
+            }
+            else if(t==KNIGHT){
+                DX[0]=1; DY[0]=2;
+                DX[1]=1; DY[1]=-2;
+                DX[2]=-1;DY[2]=2;
+                DX[3]=-1;DY[3]=-2;
+                DX[4]=2; DY[4]=1;
+                DX[5]=2; DY[5]=-1;
+                DX[6]=-2;DY[6]=1;
+                DX[7]=-2;DY[7]=-1;
+                for(h=0;h<8;h++){
+                    xx=i+DX[h];
+                    yy=j+DY[h];
+                    if(validpos(xx,yy))attack[xx][yy]=1;
+                }
+            }
+            else if(t==BISHOP){
+                DX[0]=1; DY[0]=1;
+                DX[1]=1; DY[1]=-1;
+                DX[2]=-1;DY[2]=1;
+                DX[3]=-1;DY[3]=-1;
+                for(h=0;h<4;h++){
+                    xx=i+DX[h];yy=j+DY[h];
+                    for(;validpos(xx,yy);xx+=DX[h],yy+=DY[h]){
+                        attack[xx][yy]=1;
+                        if(board[xx][yy]!=0)break;
+                    }
+                }
+            }
+            else if(t==QUEEN){
+                DX[0]=1; DY[0]=1;
+                DX[1]=1; DY[1]=-1;
+                DX[2]=-1;DY[2]=1;
+                DX[3]=-1;DY[3]=-1;
+                DX[4]=1; DY[4]=0;
+                DX[5]=-1;DY[5]=0;
+                DX[6]=0; DY[6]=1;
+                DX[7]=0; DY[7]=-1;
+                for(h=0;h<8;h++){
+                    xx=i+DX[h];yy=j+DY[h];
+                    for(;validpos(xx,yy);xx+=DX[h],yy+=DY[h]){
+                        attack[xx][yy]=1;
+                        if(board[xx][yy]!=0)break;
+                    }
+                }
+            }
+            else if(t==KING){
+                for(g=-1;g<=1;g++)for(h=-1;h<=1;h++){
+                    xx=i+g;yy=j+h;
+                    if(validpos(xx,yy))attack[xx][yy]=1;
+                }
+            }
+        }
+        int fx0,fx1,fy0=y0,fy1=y1;
+        
+        // (x0,y0) to (fx0,fy0): KING
+        // (x1,y1) to (fx1,fy1): ROOK
+        if(castle==-1){fx0=2;fx1=3;}
+        else          {fx0=6;fx1=5;}
+        
+        int delta_x=fx0-x0;
+        xx=x0;yy=y0;
+        for(;;xx+=delta_x){if(attack[xx][yy])return 0;if(xx==fx0)break;}
+        board[x0][y0]=0;
+        board[x1][y1]=0;
+        
+        xx=x0;yy=y0;
+        delta_x=fx0-x0;
+        for(;;xx+=delta_x){if(board[xx][yy]!=0)return 0;if(xx==fx0)break;}
+        
+        xx=x1;yy=y1;
+        delta_x=fx1-x1;
+        for(;;xx+=delta_x){if(board[xx][yy]!=0)return 0;if(xx==fx1)break;}
+        
+        moved[fx0][fy0]=1;
+        moved[fx1][fy1]=1;
+        board[fx0][fy0]=color*KING;
+        board[fx1][fy1]=color*ROOK;
+        return 1;
+    }
+    else if(ty==PAWN){
+        if(color==WHITE){
+            if(dx==0&&(dy==1||(dy==2&&y0==1)));
+            else if(iabs(dx)==1&&dy==1);
+            else return 0;
+        }
+        else{
+            if(dx==0&&(dy==-1||(dy==-2&&y0==N-2)));
+            else if(iabs(dx)==1&&dy==-1);
+            else return 0;
+        }
+        
+        if(iabs(dx)==1){
+           if(c2==0)return 0;
+        }
+        
+        if(dx==0&&iabs(dy)==2&&(empty(x0,y0,x1,y1)==0||board[x1][y1]!=0))return 0;
+        if(dx==0&&iabs(dy)==1&&board[x1][y1]!=0)return 0;
+    }
+    else if(ty==ROOK){
+        if(dx!=0&&dy!=0)return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==KNIGHT){
+        if(dx*dx+dy*dy!=5)return 0;
+    }
+    else if(ty==BISHOP){
+        if(iabs(dx)!=iabs(dy))return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==QUEEN){
+        if(dx==0||dy==0||iabs(dx)==iabs(dy));
+        else return 0;
+        if(!empty(x0,y0,x1,y1))return 0;
+    }
+    else if(ty==KING){
+        if(dx*dx+dy*dy>2)return 0;
+    }
+    
+    int tmp=board[x1][y1];
+    board[x1][y1]=board[x0][y0];
+    board[x0][y0]=0;
+    moved[x1][y1]=1;
+    
+    if(chess(color)){
+        board[x0][y0]=board[x1][y1];
+        board[x1][y1]=tmp;
+        return 0;// can't move to chess
+    }
+    
+    return 1;
+}
+
+
+int chess(int color){
+// check if color's king is in chess or not    
+    int i,j,x0,y0,x1,y1,ty,dx,dy;
+    
+    for(i=0;i<N;i++)for(j=0;j<N;j++)// find king
+        if(board[i][j]==color*KING){x1=i;y1=j;}
+    
+    for(x0=0;x0<N;x0++)for(y0=0;y0<N;y0++)if(color*board[x0][y0]<0){
+        ty=iabs(board[x0][y0]);
+        dx=x1-x0;
+        dy=y1-y0;
+        
+        if(ty==PAWN){
+            if(color==BLACK){if(iabs(x1-x0)==1&&y1==y0+1)return 1;}
+            if(color==WHITE){if(iabs(x1-x0)==1&&y1==y0-1)return 1;}
+        }
+        else if(ty==ROOK){
+            if((dx==0||dy==0)&&empty(x0,y0,x1,y1))return 1;
+        }
+        else if(ty==KNIGHT){
+            if(dx*dx+dy*dy==5)return 1;
+        }
+        else if(ty==BISHOP){
+            if(iabs(dx)==iabs(dy)&&empty(x0,y0,x1,y1))return 1;
+        }
+        else if(ty==QUEEN){
+            if((dx==0||dy==0||iabs(dx)==iabs(dy))&&empty(x0,y0,x1,y1))return 1;
+        }
+    }
+    return 0;// no chess
+}
+
+
+        
+int B[maxdepth][N][N];
+int M[maxdepth][N][N];
+
+void draw_board(int depth){
+    
+    int i,j;
+    printf("board:\n");
+    for(j=N-1;j>=0;j--){
+        for(i=0;i<N;i++){
+            int ty=B[depth][i][j];
+            if(ty==0)printf(".");
+            else if(iabs(ty)==PAWN)  {if(ty>0)printf("P");else printf("p");}
+            else if(iabs(ty)==ROOK)  {if(ty>0)printf("R");else printf("r");}
+            else if(iabs(ty)==KNIGHT){if(ty>0)printf("N");else printf("n");}
+            else if(iabs(ty)==BISHOP){if(ty>0)printf("B");else printf("b");}
+            else if(iabs(ty)==QUEEN) {if(ty>0)printf("Q");else printf("q");}
+            else if(iabs(ty)==KING)  {if(ty>0)printf("K");else printf("k");}
+        }
+        printf("\n");
+    }
+    return;
+}
+
+int main(void){
+    
+    int ans=0,nfisher=0;
+    int x0,x1,y0,y1,I;
+    int i,j,tmp,test,v,cnt[7],bc[2],r0,r1,c2,color;
+    int found_mate,depth,backtrack;
+    int pos[6];
+    time_t sec=time(NULL);
+    
+    for(I=0;I<390625;I++){
+        tmp=I;
+        for(i=0;i<7;i++)cnt[i]=0;
+        test=1;
+        for(i=0;i<N;i++){
+            v=2+(tmp%5);
+            board[i][0]=v;tmp/=5;
+            cnt[v]++;
+        }
+        
+        if(cnt[2]==2&&cnt[3]==2&&cnt[4]==2&&cnt[5]==1&&cnt[6]==1){
+           for(i=0;i<N&&board[i][0]!=ROOK;i++);
+           r0=i;i++;
+           for(;i<N&&board[i][0]!=ROOK;i++);
+           r1=i;
+           for(i=0;i<N&&board[i][0]!=KING;i++);
+           if(r0>i||r1<i)test=0;
+           bc[0]=0;bc[1]=0;
+           for(i=0;i<N;i++)if(board[i][0]==BISHOP)bc[i%2]++;
+           if(bc[0]==2||bc[1]==2)test=0;
+           
+           if(test){
+               nfisher++;
+               
+               for(i=0;i<N;i++){
+                   board[i][1]=PAWN;
+                   board[i][N-2]=-PAWN;
+                   for(j=2;j<N-2;j++)board[i][j]=0;
+               }
+               for(i=0;i<N;i++)board[i][N-1]=-board[i][0];
+               
+               
+               depth=1;
+               found_mate=0;
+               pos[1]=-1;
+               for(i=0;i<N;i++)for(j=0;j<N;j++){
+                   B[0][i][j]=board[i][j];
+                   M[0][i][j]=0;// not moved the pieces
+               }
+               while(found_mate==0&&depth>0){
+                   pos[depth]++;
+                   backtrack=0;
+                   if(pos[depth]>=N4+2){
+                       backtrack=1;
+                       if(depth==5){
+                           int castled=0;
+                           for(i=1;i<=4;i++)if(pos[i]>=N4)castled=1;
+                           for(i=0;i<depth;i++){printf("i=%d\n",i);draw_board(i);}
+                           found_mate=1;
+                       }
+                   }
+                   else{
+                       int castle;
+                       if(depth&1)c2=WHITE;else c2=BLACK;
+                       if(pos[depth]<N4){
+                          v=pos[depth]/N2;
+                          x0=v%N;
+                          y0=v/N;
+                          color=B[depth-1][x0][y0];
+                          castle=0;
+                       }
+                       else{
+                           castle=-1+2*(pos[depth]-N4);
+                       }
+                       
+                       if(pos[depth]>=N4){x0=0;y0=0;x1=0;x1=0;}// fake
+                       
+                       if(castle==0&&color*c2<=0){
+                           pos[depth]-=pos[depth]%N2;
+                           pos[depth]+=N2-1;
+                       }
+                       else{
+                           if(castle==0){
+                             x1=pos[depth]%N;
+                             y1=(pos[depth]/N)%N;
+                           }
+                           for(i=0;i<N;i++)for(j=0;j<N;j++){
+                               board[i][j]=B[depth-1][i][j];
+                               moved[i][j]=M[depth-1][i][j];
+                           }
+                           if(make_a_move(c2,x0,y0,x1,y1,castle)){
+
+                               if(depth<=3||(depth==4&&chess(-c2))){
+                                  for(i=0;i<N;i++)for(j=0;j<N;j++){
+                                      B[depth][i][j]=board[i][j];
+                                      M[depth][i][j]=moved[i][j];
+                                  }
+                                  depth++;
+                                  pos[depth]=-1;
+                              }
+                              else if(depth==5)depth--;
+                           }
+                       }
+                   }
+                   if(backtrack)depth--;
+               }
+               printf("mate=%d;\n",found_mate);
+               if(found_mate)ans++;
+               printf("Count nfisher=%d;ans=%d;time=%ld sec.\n",nfisher,ans,time(NULL)-sec);
+           }
+        }
+    }
+    printf("nfisher=%d;\nans=%d;time=%ld sec.",nfisher,ans,time(NULL)-sec);
+    return 0;
+}
+-----------
+omitted screen output
+-----------
