@@ -1,0 +1,18 @@
+Hi!
+
+One solution is:
+P=1;O=0;N=2;D=6;E=5;R=4;T=3;H=9;I=7;S=8;
+with this PONDER=102654 and THIS=3978, but sin is periodic with 360 degree, so sin(PONDER)=sin(54) and sin(THIS)=sin(18). These are known sin values (you can get them from the regular pentagon, which has 108 degree internal angles) : sin(18)=(sqrt(5)-1)/4 and sin(54)=(sqrt(5)+1)/4, obviously none of them is zero, and their product
+sin(18)*sin(54)=(sqrt(5)-1)/4*(sqrt(5)+1)/4=1/4=0.25, so it has 999998 zeroes in the first 1000000 digits after the decimal point (more than the required >1/5*10^6=200000 digits)
+
+Since sin(54)=sin(18)+0.5 it is enough to check that the 836172-th digit after the decimal point of sin(18)=(sqrt(5)-1)/4 is not zero, we use PARI-Gp here:
+? \p 1000000
+   realprecision = 1000016 significant digits (1000000 digits displayed)
+? x=(sqrt(5)-1)/4;
+? floor(x*10^836173)%100
+%4 = 88
+? 
+
+So after the first 836171 digits of (sqrt(5)-1)/4 we see 88 in the decimal expansion, here there could be rounding/precision problems but since we used enough precision (more than a million digits) the 836173-th digit is 7,8 or 9, and the required 836172-th digit is 8, a nonzero digit.
+
+To find the above permuation used also PARI-Gp, checking all 10! permutations of 0,..,9 takes a very little time to find PONDER%360=54 and THIS%360=18 permutation.
