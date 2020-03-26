@@ -1,0 +1,99 @@
+Hi!
+
+One solution:
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWPPPPPWWPPPPPPPPPPPPWPWPPPPPWPPPPPWWPWPWPWWWWWWWWWPPPPPWWPPPPPWWPPPPPPPPPPPPWWWPPPPWWPPWPPWWWWWWWWWPPPPPPWPPPPPWWPPPPPWWPPPPPPWPWPPPWWPPPWPWWWWWWWWWPPPPPWWPPPPPWWPPPPPWWPPPPPWWPPPPPWWPWPWPWWWWWWWWWPPPPPPWPPPPPPPPPPWPPWPPWPPPWPPPPPWWWWWWWWWWWWWWWWPPWPWWWWPPPWWWWWPPWWWWPWPWWWPPPPWWWWWWWWW
+
+I've written an integer program for the problem and solved it in roughly 15 seconds with the free Glpk program. See the attachments for the code (and comments) and the screen output.
+
+------------
+/* run: ./glpsol --math -o solution.txt ibm.txt */
+
+param n := 7;
+/* size of the cube */
+
+param mPeterPan := 161;
+/* minimum number of Peter Pan in the cube */
+
+var x{i in 1..n, j in 1..n, k in 1..n}, binary;
+/* one means that Wendy is in the center of the cell, if it is zero then Peter Pan */
+/* ( this is a shifted cube, the centers are from [1,n]X[1,n]X[1,n] ) */
+
+s.t. a{i1 in 1..n,j1 in 1..n,k1 in 1..n,d1 in (-1)..1,d2 in (-1)..1,d3 in (-1)..1: abs(d1)+abs(d2)+abs(d3)>0}:
+sum{t in (-n)..n,i2 in 1..n,j2 in 1..n,k2 in 1..n:i2==i1+d1*t and j2==j1+d2*t and k2==k1+d3*t} x[i2,j2,k2]>=1;
+/* if (i1,j1,k1) is on the line and the direction of the line is (d1,d2,d3), then the equation of the line is */
+/* i2=i1+d1*t */
+/* j2=j1+d2*t */ 
+/* k2=k1+d3*t */
+/* for the points in the cube t will be (unique and) integer and in the [-n,n] interval */
+/* we need at least one Wendy on the line, otherwise all of them is Peter Pan on that line so Captain Hook wins */
+/* Obviously -1<=d1,d2,d3<=1 (integers), and at least one of them is non-zero */
+
+/* we need at least mPeterPan Peter Pan */
+s.t. b:sum{i in 1..n,j in 1..n,k in 1..n}(1-x[i,j,k])>=mPeterPan;
+
+/* any solution will be good */
+minimize total: 0;
+
+/* solve the integer programming problem */
+solve;
+
+/* print out the solution (note that there is a symmetry in solutions, it could be different from the required top close etc format) */
+/* , but this is still a valid solution */
+for{i in 1..n}{for{j in 1..n}{for{k in 1..n} printf "%s", if x[i,j,k] then "W" else "P";}}
+printf("\n");
+
+end;
+
+---------------
+screen output:
+
+gerbicz@linux-qm1c:~/glpk-4.55/examples> ./glpsol --math -o solution.txt ibm.txt
+GLPSOL: GLPK LP/MIP Solver, v4.55
+Parameter(s) specified in the command line:
+ --math -o solution.txt ibm.txt
+Reading model section from ibm.txt...
+35 lines were read
+Generating a...
+Generating b...
+Generating total...
+Model has been successfully generated
+GLPK Integer Optimizer, v4.55
+8920 rows, 343 columns, 43953 non-zeros
+343 integer variables, all of which are binary
+Preprocessing...
+624 hidden packing inequaliti(es) were detected
+4891 rows, 275 columns, 23225 non-zeros
+275 integer variables, all of which are binary
+Scaling...
+ A: min|aij| =  1.000e+00  max|aij| =  1.000e+00  ratio =  1.000e+00
+Problem data seem to be well scaled
+Constructing initial basis...
+Size of triangular part is 4891
+Solving LP relaxation...
+GLPK Simplex Optimizer, v4.55
+4891 rows, 275 columns, 23225 non-zeros
+      0: obj =   0.000000000e+00  infeas =  4.890e+03 (0)
+    500: obj =   0.000000000e+00  infeas =  3.283e+03 (0)
+   1000: obj =   0.000000000e+00  infeas =  2.675e+03 (0)
+   1500: obj =   0.000000000e+00  infeas =  2.147e+03 (0)
+   2000: obj =   0.000000000e+00  infeas =  1.641e+03 (0)
+   2500: obj =   0.000000000e+00  infeas =  1.195e+03 (0)
+   3000: obj =   0.000000000e+00  infeas =  7.880e+02 (0)
+   3500: obj =   0.000000000e+00  infeas =  4.959e+02 (0)
+   4000: obj =   0.000000000e+00  infeas =  2.910e+02 (0)
+   4500: obj =   0.000000000e+00  infeas =  8.402e+01 (0)
+*  4957: obj =   0.000000000e+00  infeas =  2.956e-13 (0)
+OPTIMAL LP SOLUTION FOUND
+Integer optimization begins...
++  4957: mip =     not found yet >=              -inf        (1; 0)
++  8675: mip =     not found yet >=   0.000000000e+00        (75; 56)
++ 14439: mip =     not found yet >=   0.000000000e+00        (75; 184)
++ 17348: >>>>>   0.000000000e+00 >=   0.000000000e+00   0.0% (79; 256)
++ 17348: mip =   0.000000000e+00 >=     tree is empty   0.0% (0; 419)
+INTEGER OPTIMAL SOLUTION FOUND
+Time used:   14.9 secs
+Memory used: 13.5 Mb (14170171 bytes)
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWPPPPPWWPPPPPPPPPPPPWPWPPPPPWPPPPPWWPWPWPWWWWWWWWWPPPPPWWPPPPPWWPPPPPPPPPPPPWWWPPPPWWPPWPPWWWWWWWWWPPPPPPWPPPPPWWPPPPPWWPPPPPPWPWPPPWWPPPWPWWWWWWWWWPPPPPWWPPPPPWWPPPPPWWPPPPPWWPPPPPWWPWPWPWWWWWWWWWPPPPPPWPPPPPPPPPPWPPWPPWPPPWPPPPPWWWWWWWWWWWWWWWWPPWPWWWWPPPWWWWWPPWWWWPWPWWWPPPPWWWWWWWWW
+Model has been successfully processed
+Writing MIP solution to 'solution.txt'...
+gerbicz@linux-qm1c:~/glpk-4.55/examples> 
