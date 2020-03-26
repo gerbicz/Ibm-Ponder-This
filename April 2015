@@ -3,7 +3,8 @@ Hi!
 One solution:
 WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWPPPPPWWPPPPPPPPPPPPWPWPPPPPWPPPPPWWPWPWPWWWWWWWWWPPPPPWWPPPPPWWPPPPPPPPPPPPWWWPPPPWWPPWPPWWWWWWWWWPPPPPPWPPPPPWWPPPPPWWPPPPPPWPWPPPWWPPPWPWWWWWWWWWPPPPPWWPPPPPWWPPPPPWWPPPPPWWPPPPPWWPWPWPWWWWWWWWWPPPPPPWPPPPPPPPPPWPPWPPWPPPWPPPPPWWWWWWWWWWWWWWWWPPWPWWWWPPPWWWWWPPWWWWPWPWWWPPPPWWWWWWWWW
 
-I've written an integer program for the problem and solved it in roughly 15 seconds with the free Glpk program. See the attachments for the code (and comments) and the screen output.
+I've written an integer program for the problem and solved it in roughly 15 seconds with the free Glpk program. See the attachments 
+for the code (and comments) and the screen output.
 
 ------------
 /* run: ./glpsol --math -o solution.txt ibm.txt */
