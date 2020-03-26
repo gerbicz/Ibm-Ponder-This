@@ -1,0 +1,43 @@
+Hi!
+
+x=(1+1/80)^80
+y=(1+1/80)^81
+the first and last ten digits of x: 2701484940, 6337890625
+the first and last ten digits of y: 2735253502, 1142578125
+
+For positive integer n value it is known that x=(1+1/n)^n and y=(1+1/n)^(n+1)
+gives a rational solution of the equation, because:
+x^y=((1+1/n)^n)^((1+1/n)^(n+1))=(1+1/n)^((n+1)^(n+1)/n^n)
+y^x=((1+1/n)^(n+1))^((1+1/n)^n)=(1+1/n)^((n+1)^(n+1)/n^n)
+hence x^y=y^x. If we want x, where we can see the last eight (or some) digits
+then n=2^a*5^b for some non-negative a,b integers.
+Restricting the search for a,b<10 we have found 3 solutions, 
+the simple PARI-GP solution, using only integer arithmetic:
+
+for(a=0,9,for(b=0,9,n=2^a*5^b;e=max(a,b);M=10^8;\
+r=Mod(n+1,M)^n*Mod(2,M)^(n*(e-a))*Mod(5,M)^(n*(e-b));\
+r=lift(r);test=1;v=vector(10,i,0);for(i=1,8,\
+res=1+(r%10);r\=10;v[res]+=1;if(v[res]>1,test=0));\
+if(test,X=[a,b,n];print([a,b,n]))))
+
+what has found n=80;3125;1953125 as a solution,
+this gives for example that x=(1+1/80)^80 and y=(1+1/80)^81 a solution.
+
+A "cut" function used to get the first and last
+L digits of a positive rational number:
+
+cut(r,L)={tmp=r;d=10^L;while(type(tmp)!="t_INT",tmp*=10);\
+t=tmp;while(tmp>=d,tmp\=10);return([tmp,t%d])}
+----------
+Hi!
+
+Just for small correction obvioulsy 
+x starts as 2.701484940
+and y with  2.735253502
+if you needed also the first (ten) digits with a decimal point.
+----------
+Dear Robert,
+
+Your answer is correct, and you even solved the '*' version that I'm going to post tomorrow :-)
+
+Oded
