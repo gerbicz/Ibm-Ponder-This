@@ -1,0 +1,322 @@
+Hi!
+
+One (possible) solution for 11 black balls:
+
+O.BWB.O
+B.BB..B
+BBB...B
+.......
+O.B...O
+(-5,4),(-1,-2),(-5,2),(-5,4),(-4,1),(6,1),(-3,-1),(-3,1),(6,-1),(-4,-3),(-4,-3)
+
+Used a backtracking search: first fix the white ball, and then in each layer (depth) try all directions for the latest ball, see the route of the ball: we shouldn't visit the already visited positions. And for each such position see if there would be a black ball in that position would it fall in the pocket at the corner and doesn't visit a forbidden position. If yes, then save this balck ball's position, and the direction of the hit.
+
+To make easier the following of the ball's route we make a partition of the plane with isomorph [2*W]X[2*L] rectangles, using this the ball's route is a half line and to get the original position from (x,y) to (V(x),V(y)) we simply do:
+if x>W then V(x)=2*W-x otherwise V(x)=x, similarly:
+if y>L then V(y)=2*L-y otherwise V(y)=y.
+
+If (dx,dy) is the direction of the hit, then we can assume that (dx!=0 or dy!=0) and gcd(dx,dy)=1 [otherwise we can use the same (dx/g,dy/g) direction with g=gcd(dy,dy)].
+
+We can assume that abs(dx)<=W and abs(dy)<=L.
+The computer search took less than a minute, and running it with NB=12 show that there is no solution for 12 black balls.
+-------------
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <time.h>
+#include <assert.h>
+
+#define W 6
+#define L 4
+#define NB 11 //8 // number of black balls
+#define Z ((W+1)*(L+1)) // area of the table
+#define maxsize (Z*Z)
+
+int corner(int x,int y){return ((x==0||x==W)&&(y==0||y==L));}
+int iabs(int x){if(x<0)return (-x);return x;}
+int gcd(int x,int y){if(y==0)return x;return gcd(y,x%y);}
+
+void trans(int x,int y,int dx,int dy,int *x2,int *y2){
+    
+    x=(x+dx)%(2*W);if(x<0)x+=2*W;
+    y=(y+dy)%(2*L);if(y<0)y+=2*L;
+    *x2=x;
+    *y2=y;
+}
+
+int VX(int x){if(x>W)return 2*W-x;return x;}
+int VY(int y){if(y>L)return 2*L-y;return y;}
+
+int main(void){
+    
+    int pos[NB+1],size[NB+1],**dirx,**diry,A[NB+1][W+1][L+1];
+    int visited[W+1][L+1],v[W+1][L+1];
+    int i,j,dx,dy,backtrack,depth;
+    int w0,l0,w,l,test,p,cnt,hit;
+    int x,y,xx,yy,x2,y2,**bx,**by,xr,yr,ballx[NB],bally[NB];
+    char grid[W+2][L+2];
+    
+    dirx=(int**)malloc((NB+1)*sizeof(int*));for(i=0;i<=NB;i++)dirx[i]=(int*)malloc(maxsize*sizeof(int));
+    diry=(int**)malloc((NB+1)*sizeof(int*));for(i=0;i<=NB;i++)diry[i]=(int*)malloc(maxsize*sizeof(int));
+    bx=(int**)malloc((NB+1)*sizeof(int*));for(i=0;i<=NB;i++)bx[i]=(int*)malloc(maxsize*sizeof(int));
+    by=(int**)malloc((NB+1)*sizeof(int*));for(i=0;i<=NB;i++)by[i]=(int*)malloc(maxsize*sizeof(int));
+
+    for(w0=0;w0<=W;w0++)for(l0=0;l0<=L;l0++)if(!corner(w0,l0)){
+    ballx[0]=w0;
+    bally[0]=l0;
+    depth=0;
+    pos[0]=-1;
+    size[0]=1;
+    printf("w0=%d;l0=%d;\n",w0,l0);
+    while(depth>=0){
+        pos[depth]++;
+        backtrack=0;
+        if(pos[depth]>=size[depth])backtrack=1;
+        else{
+            if(depth==NB){
+              for(x=0;x<=W;x++)for(y=0;y<=L;y++){
+                  if(corner(x,y))grid[x][y]='O';
+                  else           grid[x][y]='.';
+              }
+              grid[w0][l0]='W';
+              for(i=1;i<=NB;i++){x=bx[i][pos[i]];y=by[i][pos[i]];
+                  printf("x=%d;y=%d;\n",x,y);
+                  grid[x][y]='B';}
+              for(y=0;y<=L;y++){for(x=0;x<=W;x++)printf("%c",grid[x][y]);printf("\n");}
+              for(i=1;i<=NB;i++)printf("(%d,%d),",dirx[i][pos[i]],diry[i][pos[i]]);
+              printf("\n");
+              return 0;
+           }
+           
+           if(depth==0){w=w0;l=l0;for(i=0;i<=W;i++)for(j=0;j<=L;j++)A[depth][i][j]=0;
+                        A[depth][w][l]=1;}
+           else{
+               p=pos[depth];
+               w=bx[depth][p];l=by[depth][p];
+               ballx[depth]=w;bally[depth]=l;
+               for(i=0;i<=W;i++)for(j=0;j<=L;j++)A[depth][i][j]=A[depth-1][i][j];
+               A[depth][w][l]=1;
+               x=ballx[depth-1];y=bally[depth-1];
+               dx=dirx[depth][p];
+               dy=diry[depth][p];
+               for(hit=0;hit<2;){
+                   A[depth][VX(x)][VY(y)]=1;
+                   trans(x,y,dx,dy,&xx,&yy);
+                   x=xx;y=yy;
+                   xr=VX(x);yr=VY(y);
+                   if((xr==w&&yr==l)||corner(xr,yr))hit++;
+               }
+           }
+           
+           test=1;
+           cnt=0;
+           for(dx=-W;dx<=W;dx++)for(dy=-L;dy<=L;dy++)
+               if((dx!=0||dy!=0)&&gcd(iabs(dx),iabs(dy))==1&&\
+                   (w>0||dx>0)&&(w<W||dx<0)&&(l>0||dy>0)&&(l<L||dy<0)){
+               for(i=0;i<=W;i++)for(j=0;j<=L;j++)visited[i][j]=A[depth][i][j];
+               x=w;y=l;
+               for(;;){
+                   trans(x,y,dx,dy,&xx,&yy);
+                   x=xx;y=yy;
+                   xr=VX(x);yr=VY(y);
+                   
+                   if(visited[xr][yr]||corner(x,y))break;
+                   visited[xr][yr]=1;
+
+                   for(i=0;i<=W;i++)for(j=0;j<=L;j++)v[i][j]=visited[i][j];
+                   x2=x;y2=y;
+                   for(;;){
+                       trans(x2,y2,dx,dy,&xx,&yy);
+                       x2=xx;y2=yy;
+                       xr=VX(x2);yr=VY(y2);
+                       if(corner(xr,yr)){
+                           bx[depth+1][cnt]=VX(x);
+                           by[depth+1][cnt]=VY(y);
+                           dirx[depth+1][cnt]=dx;
+                           diry[depth+1][cnt]=dy;
+                           cnt++;
+                       }
+                       if(v[xr][yr])break;
+                       v[xr][yr]=1;
+                   }
+               }
+           }
+           if(cnt>0){depth++;size[depth]=cnt;pos[depth]=-1;}
+    }
+    if(backtrack)depth--;
+    }}
+    return 0;
+}
+-----------
+Hi!
+
+Improved solution for 24 black balls:
+
+O.BBBBO
+WBBB..B
+B.BBBBB
+.BBBBBB
+OBBBB.O
+(0,1) (3,1) (1,3) (4,1) (4,1) (5,-7) (5,1) (11,1) (7,3) (5,1) (5,3) (0,1) (-6,7)
+(-10,1) (2,1) (8,3) (5,-4) (5,4) (1,0) (1,2) (5,2) (7,6) (1,4) (5,-4) 
+
+My previous search was very restricted: we should assure only that:
+1. the white ball doesn't fall in one of the corner's pocket
+2. the black ball's initial position isn't the same of an already visited position (by white and black balls)
+3. the allowed (dx,dy) directions are such that gcd(dx,dy,2*W,2*L)=1, so the greatest common divisor of these 4 numbers is 1, this is because for (dx2,dy2) direction, where dx2=dx+c1*(2*W) and dy2=dy+c2*(2*L) the final positions will be the same and if gcd(dx,dy,2*W,2*L)=1 then we can find c1,c2 for that gcd(dx2,dy2)=1. And in that case there will be no middle grid position on the route, when we make the move with the (dx2,dy2) direction. Example: even (dx,dy)=(3,3) isn't usable, but dx2=dx=3; dy2=dy+2*L=3+2*4=11 is usable, because gcd(3,11)=1. [in my code W=6;L=4 the lengths of the billiard table].
+
+The attached code solves the easier NB=23 black balls problem quite easily in 1 second, but struggles with NB=24, that has been found with another code in roughly 20 minutes. But shows how important is the order of the white ball's position in the search and the order of the directions.
+----------
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define NB 23 // the number of black balls
+
+#define W  6
+#define W2 12 // = 2*W
+#define L  4
+#define L2 8 // = 2*L
+#define numgrid 35 // = (W+1)*(L+1)
+#define maxsize (4*W*L*(W+1)*(L+1))
+#define size2 (4*W*L)
+#define GG (gcd(2*L,2*W))
+
+
+typedef unsigned long long int ui64;
+ui64 Bits[64];
+
+int corner(int x,int y){return ((x==0||x==W)&&(y==0||y==L));}
+int gcd(int x,int y){if(y==0)return x;return gcd(y,x%y);}
+
+int VX(int x){if(x>W)return 2*W-x;return x;}
+int VY(int y){if(y>L)return 2*L-y;return y;}
+
+int numbits[4096];
+int cntones(ui64 n){
+    int ret=0;
+    while(n){ret+=numbits[n&4095];n>>=12;}
+    return ret;
+}
+
+int main(void){
+    
+    int pos[NB+1],size[NB+1],dirx[NB+1][maxsize],diry[NB+1][maxsize],bx[NB+1][maxsize],by[NB+1][maxsize];
+    int D[(W+1)*(L+1)][size2];
+    int c1,d,g,h,i,l,dx,dy,s,backtrack,depth;
+    int w0,l0,w,test,p,cnt;
+    int x,y,x2,y2,xr,yr,len,ballx[NB+1],bally[NB+1];
+    ui64 A[NB+1],u,O[(W+1)*(L+1)][size2],offset[NB+1][maxsize],v;
+    char grid[W+2][L+2];
+    time_t sec=time(NULL);
+    
+    Bits[0]=1;for(i=1;i<64;i++)Bits[i]=2*Bits[i-1];
+    numbits[0]=0;for(i=1;i<4096;i++)numbits[i]=(i&1)+numbits[i>>1];
+    
+    for(s=0;s<=W+L;s++)for(x=0;x<=s;x++){
+        y=s-x;if(y<0||y>L||x>W)continue;
+        for(dx=0;dx<W2;dx++)for(dy=0;dy<L2;dy++){
+        test=1;len=0;
+        if(corner(x,y))test=0;
+        if(gcd(gcd(dx,dy),GG)==1){
+           x2=x;y2=y;
+           h=y*(W+1)+x;
+           u=Bits[h];
+           for(test=0;;len++){
+               x2+=dx;if(x2>=W2)x2-=W2;
+               y2+=dy;if(y2>=L2)y2-=L2;
+               xr=VX(x2);
+               yr=VY(y2);
+               h=yr*(W+1)+xr;
+               if(u&Bits[h])break;
+               if(corner(xr,yr)){test=1;break;}
+               u|=Bits[h];
+           }
+        }
+        if(!test)len=0;
+        D[y*(W+1)+x][dy*W2+dx]=len;
+        O[y*(W+1)+x][dy*W2+dx]=u;
+    }}
+    
+    printf("Testing NB=%d;W=%d;L=%d;\n",NB,W,L);
+    for(l0=L/2;l0>=0;l0--)for(w0=W/2;w0>=0;w0--)
+        if(!corner(w0,l0)){
+    printf("w0=%d;l0=%d;\n",w0,l0);
+    ballx[0]=w0;
+    bally[0]=l0;
+    depth=0;
+    pos[0]=-1;
+    size[0]=1;
+    while(depth>=0){
+        pos[depth]++;
+        backtrack=0;
+        if(pos[depth]>=size[depth])backtrack=1;
+        else{
+           if(depth==0){w=w0;l=l0;
+                        g=(W+1)*l+w;
+                        A[depth]=Bits[g];}
+           else{
+               p=pos[depth];
+               w=bx[depth][p];l=by[depth][p];
+               ballx[depth]=w;bally[depth]=l;
+               g=(W+1)*l+w;
+               A[depth]=A[depth-1]|offset[depth][p];
+           }
+
+            if(depth==NB){
+              for(x=0;x<=W;x++)for(y=0;y<=L;y++){
+                  if(corner(x,y))grid[x][y]='O';
+                  else           grid[x][y]='.';
+              }
+              printf("Solved in %ld sec. with %d black balls:\n",time(NULL)-sec,NB);
+              grid[w0][l0]='W';
+              for(i=1;i<=NB;i++)grid[bx[i][pos[i]]][by[i][pos[i]]]='B';
+              for(y=0;y<=L;y++){for(x=0;x<=W;x++)printf("%c",grid[x][y]);printf("\n");}
+              for(i=1;i<=NB;i++){
+                  x=ballx[i-1];dx=dirx[i][pos[i]];
+                  y=bally[i-1];dy=diry[i][pos[i]];
+                  
+                  for(s=0,test=1;test;s++)for(c1=0;c1<=s&&test;c1++)
+                  {if(gcd(dx+c1*W2,dy+(s-c1)*L2)==1){test=0;dx+=c1*W2;dy+=(s-c1)*L2;}}
+                  
+                  if(x==0&&dx<0)dx=-dx;
+                  if(x==W&&dx>0)dx=-dx;
+                  if(y==0&&dy<0)dy=-dy;
+                  if(y==L&&dy>0)dy=-dy;
+                  printf("(%d,%d) ",dx,dy);}
+              printf("\n");
+              return 0;
+           }
+           
+           v=A[depth];
+           test=1;
+           cnt=0;
+           int req=numgrid-4-NB+depth+1;
+           for(d=0;d<size2;d++)if(D[g][d]>0&&req>=cntones(v|O[g][d])){
+               len=D[g][d];
+               dx=d%W2;
+               dy=d/W2;
+               x=w;y=l;
+               for(i=1;i<=len;i++){
+                   x+=dx;if(x>=W2)x-=W2;
+                   y+=dy;if(y>=L2)y-=L2;
+                   xr=VX(x);
+                   yr=VY(y);
+                   h=(W+1)*yr+xr;
+                   if((Bits[h]&v)==0){
+                      bx[depth+1][cnt]=xr;
+                      by[depth+1][cnt]=yr;
+                      dirx[depth+1][cnt]=dx;
+                      diry[depth+1][cnt]=dy;
+                      offset[depth+1][cnt]=O[g][d];
+                      cnt++;
+                   }
+               }
+           }
+           if(cnt>0){depth++;size[depth]=cnt;pos[depth]=-1;}
+    }
+    if(backtrack)depth--;
+    }}
+    printf("Proved in %ld sec. that there is no solution.\n",time(NULL)-sec);
+    return 0;
+}
