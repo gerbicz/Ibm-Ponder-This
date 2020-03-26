@@ -1,0 +1,26 @@
+Hi!
+
+The unique solution is:
+a=2
+b=6
+c=8
+e=0
+i=4
+m=9
+n=5
+o=1
+r=7
+t=3
+A quick Pari-Gp solution: 
+v="abceimnort";
+t=Vecsmall(v);
+
+H=vector(256);
+
+wordval(s)={local(ret,l,i,v);v=Vecsmall(s);ret=0;l=length(v);for(i=1,l,ret=10*ret+H[v[i]]);return(ret)}
+
+for(i=1,10!,p=numtoperm(10,i);for(j=1,10,H[t[j]]=p[j]-1);\
+if(wordval("n")^wordval("i")==wordval("ban"),\
+v1=wordval("a");v2=wordval("connect");v3=wordval("c");v4=wordval("inter");v5=wordval("toe");v6=wordval("at");v7=wordval("cm");\
+if(Mod(v1,v4)^v2==Mod(v3,v4)&&Mod(v1,v6)^v2==Mod(v1,v6)^v5&&Mod(v1,v7)^v2==Mod(v1,v7)^v5,\
+for(j=1,10,print1(p[j]-1","));print())))
