@@ -1,0 +1,115 @@
+Hi!
+
+One solution:
+000000003416010635024061062304051240005423000000400562103056306201504310020346300251000000640012230105410630012035105042260014000000451003623050054602602304340106265003000000136400041260204630150340316020623500000000
+
+To see this is a correct solution: place the digits in the p[6][6][6] array in increasing order, the first will be in p[0][0][0], the second in p[0][0][1] etc. Then the array has the property that if i,j,k,l are four different integers from 0-5, then p[i][j][k]!=p[i][j][l], it means that the third person in the line sees i+1 and j+1 and hears p[i][j][x] (where x is on his hat), so he can recover his number as the p[i][j][k] numbers are different (if k is valid, so different from i,j).
+
+And the same is true for other positions, so p[i][k][j]!=p[i][l][j], here note that the second person know the first person's hat as he is seeing that and the third person's hat, as he heard the third person's guess and that was correct.
+
+For the first position it should be true that p[k][i][j]!=p[l][i][j].
+
+The code used a score function, so for all above equality there is a penalty=1, we need to reach score=0, what has been reached. In each step we changed the p[][][] array in one place, if the score improved then used that array, otherwise the old array. See the attached code. (used srand() function so for different runs it will likely find different solutions).
+
+-----------
+My updated solution:
+
+000000004365060524056032042603035240004365000000500641605013306104401530050642600514000000210065460201540120065023506031210065000000631002352010036204401603640102362001000000214300042530305140450210531020214300000000
+
+I have only forgotten that the last person can't give at the guess what he is seeing on hat, otherwise the other three person could not say their hat number (and for the other three person we don't need to see this as there are different numbers on the hats)
+. I've written an integer program for the problem, the free GLPK solved it in 0.3 seconds. See my attached code (for further comments) and screen output.
+-----------
+
+/* run: ./glpsol --math -o solution.txt ibmjuly.txt */
+
+param n := 6;
+/* number of possible numbers on the hat */
+
+var x{i in 1..n, j in 1..n, k in 1..n,l in 1..n: i!=j and j!=k and k!=i}, binary;
+/* if x[i,j,k,l]=1 and the last person is seeing i,j,k on the hats then he guesses l */
+
+var hat{i in 1..n, j in 1..n, k in 1..n},integer;
+/* the guess of the last person, if he is seeing i,j and k on the hats */
+/* basically we use this only to print out the solution */
+
+/* from x[] array we can get easily the guess */
+s.t. hat1{i in 1..n,j in 1..n,k in 1..n: i!=j and j!=k and k!=i}:hat[i,j,k]=sum{l in 1..n}l*x[i,j,k,l];
+
+/* if there is the same on the hats, then guessing zero */
+s.t. hat0{i in 1..n,j in 1..n,k in 1..n: i==j or j==k or k==i}:hat[i,j,k]=0;
+
+/* use exactly one hat at the guess */
+s.t. a{i in 1..n,j in 1..n,k in 1..n: i!=j and j!=k and k!=i}:sum{l in 1..n}x[i,j,k,l]=1;
+
+/* at the last person's guess do not use the same hat what he is seeing */
+s.t. b{i in 1..n,j in 1..n,k in 1..n: i!=j and j!=k and k!=i}:x[i,j,k,i]+x[i,j,k,j]+x[i,j,k,k]=0;
+
+/* if i,j is fixed then use different guesses if he is seeing i,j,k on the hats, so the third person could give the correct answer, as he knows i,j */
+s.t. p3{i in 1..n,j in 1..n,k1 in 1..n,k2 in 1..n,l in 1..n: i!=j and i!=k1 and j!=k1 and i!=k2 and j!=k2 and k1!=k2}:x[i,j,k1,l]+x[i,j,k2,l]<=1;
+
+/* for the second person */
+s.t. p2{i in 1..n,j in 1..n,k1 in 1..n,k2 in 1..n,l in 1..n: i!=j and i!=k1 and j!=k1 and i!=k2 and j!=k2 and k1!=k2}:x[i,k1,j,l]+x[i,k2,j,l]<=1;
+
+/* for the first person */
+s.t. p1{i in 1..n,j in 1..n,k1 in 1..n,k2 in 1..n,l in 1..n: i!=j and i!=k1 and j!=k1 and i!=k2 and j!=k2 and k1!=k2}:x[k1,i,j,l]+x[k2,i,j,l]<=1;
+
+/* any solution will be good */
+minimize total: 0;
+
+/* solve the integer programming problem */
+solve;
+
+/* print out the solution */
+for{i in 1..n}{for{j in 1..n}{for{k in 1..n}{printf"%d",hat[i,j,k];}}}
+  
+printf("\n");
+
+end;
+
+------------
+screen output:
+
+gerbicz@linux-qm1c:~/glpk-4.55/examples> ./glpsol --math -o solution.txt ibmjuly.txt
+GLPSOL: GLPK LP/MIP Solver, v4.55
+Parameter(s) specified in the command line:
+ --math -o solution.txt ibmjuly.txt
+Reading model section from ibmjuly.txt...
+45 lines were read
+Generating hat1...
+Generating hat0...
+Generating a...
+Generating b...
+Generating p3...
+Generating p2...
+Generating p1...
+Generating total...
+Model has been successfully generated
+GLPK Integer Optimizer, v4.55
+6937 rows, 936 columns, 14976 non-zeros
+936 integer variables, 720 of which are binary
+Preprocessing...
+2400 rows, 480 columns, 5160 non-zeros
+480 integer variables, 360 of which are binary
+Scaling...
+ A: min|aij| =  1.000e+00  max|aij| =  6.000e+00  ratio =  6.000e+00
+Problem data seem to be well scaled
+Constructing initial basis...
+Size of triangular part is 2400
+Solving LP relaxation...
+GLPK Simplex Optimizer, v4.55
+2400 rows, 480 columns, 5160 non-zeros
+      0: obj =   0.000000000e+00  infeas =  5.400e+02 (0)
+    500: obj =   0.000000000e+00  infeas =  2.650e+01 (0)
+*   746: obj =   0.000000000e+00  infeas =  6.939e-18 (0)
+OPTIMAL LP SOLUTION FOUND
+Integer optimization begins...
++   746: mip =     not found yet >=              -inf        (1; 0)
++  1011: >>>>>   0.000000000e+00 >=   0.000000000e+00   0.0% (6; 0)
++  1011: mip =   0.000000000e+00 >=     tree is empty   0.0% (0; 11)
+INTEGER OPTIMAL SOLUTION FOUND
+Time used:   0.3 secs
+Memory used: 7.0 Mb (7334660 bytes)
+000000004365060524056032042603035240004365000000500641605013306104401530050642600514000000210065460201540120065023506031210065000000631002352010036204401603640102362001000000214300042530305140450210531020214300000000
+Model has been successfully processed
+Writing MIP solution to 'solution.txt'...
+gerbicz@linux-qm1c:~/glpk-4.55/examples> 
