@@ -1,0 +1,81 @@
+Hi!
+
+Two solutions:
+
+rqqqqqqr
+q=rrrr=q
+qr=rr=rq
+qrr==rrq
+qrr==rrq
+qr=rr=rq
+q=rrrr=q
+rqqqqqqr
+
+and
+
+rrrrrrrr
+rrrrrrrr
+rrrrrrrr
+rrrrrrrr
+rrrrrrrr
+rrrrrrrr
+rrrrrrrr
+rrrrrrrr
+
+On both chess boards the threat number is equal to 14 on each square. The second one is the trivial solution (rook on every square), for the first one used an integer program to search for boards where we allow only queen+rook, and no other chess piece.  The running time was 865 seconds with the free glpk-4.55 . See the attachment for the source code.
+------------
+
+/* run: ./glpsol --math -o solution.txt chess5.txt */
+
+param n := 8;
+/* size of the chess */
+
+var king{i in 1..n, j in 1..n}, binary;
+var queen{i in 1..n, j in 1..n}, binary;
+var rook{i in 1..n, j in 1..n}, binary;
+var bishop{i in 1..n, j in 1..n}, binary;
+var knight{i in 1..n, j in 1..n}, binary;
+var pawn{i in 1..n, j in 1..n}, binary;
+var threat{i in 1..n, j in 1..n}, integer;
+
+s.t. a{i in 1..n,j in 1..n}: king[i,j]+queen[i,j]+rook[i,j]+bishop[i,j]+knight[i,j]+pawn[i,j]<=1;
+/* there is at most one piece on each square */
+
+s.t. b{i in 1..n,j in 1..n}:sum{x in 1..n,y in 1..n: abs(i-x)+abs(j-y)>0 and (i-x)*(i-x)+(j-y)*(j-y)<=2}king[x,y]+
+sum{x in 1..n,y in 1..n: abs(i-x)+abs(j-y)>0 and i==x}queen[x,y]+
+sum{x in 1..n,y in 1..n: abs(i-x)+abs(j-y)>0 and j==y}queen[x,y]+
+sum{x in 1..n,y in 1..n: abs(i-x)+abs(j-y)>0 and abs(i-x)==abs(j-y)}queen[x,y]+
+sum{x in 1..n,y in 1..n: abs(i-x)+abs(j-y)>0 and i==x}rook[x,y]+
+sum{x in 1..n,y in 1..n: abs(i-x)+abs(j-y)>0 and j==y}rook[x,y]+
+sum{x in 1..n,y in 1..n: abs(i-x)+abs(j-y)>0 and abs(i-x)==abs(j-y)}bishop[x,y]+
+sum{x in 1..n,y in 1..n: abs(i-x)+abs(j-y)>0 and (i-x)*(i-x)+(j-y)*(j-y)==5}knight[x,y]+
+sum{x in 1..n,y in 1..n: abs(i-x)+abs(j-y)>0 and j==y+1 and abs(i-x)==1}pawn[x,y]=threat[i,j];
+/* threat[i,j] is the number of pieces attacking the (i,j) square on the board */
+
+s.t. c{i in 1..n,j in 1..n}:threat[i,j]==threat[1,1];
+/* same threat number on each square */
+
+s.t. feltetel:sum{x in 1..n,y in 1..n} (king[x,y]+queen[x,y]+rook[x,y]+bishop[x,y]+knight[x,y]+pawn[x,y])>=1;
+/* non-empty board */
+
+s.t. e{i in 1..n,j in 1..n}:(pawn[i,j]+bishop[i,j]+knight[i,j]+king[i,j])=0;
+/* no pawn,bishop,knight,king on the board */
+
+/* any solution will be good */
+maximize total: 0;
+
+/* solve the integer programming problem */
+solve;
+
+/* print out the solution */
+for{i in 1..n}{for{j in 1..n}{
+  printf"%s", if king[i,j] then "k" 
+  else if queen[i,j] then "q" 
+  else if rook[i,j] then "r"
+  else if bishop[i,j] then "b"
+  else if knight[i,j] then "n"
+  else if pawn[i,j] then "p"
+  else "=";
+  }printf"\n";}
+
+end;
