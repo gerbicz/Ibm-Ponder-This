@@ -1,0 +1,16 @@
+One solution:
+[0,1,2],[0,0,2],[1,0,2],[1,1,2],[1,2,2],[0,2,2],[0,2,1],[1,2,1],[2,2,1],[2,2,2],[2,1,2],[2,1,1],[2,1,0],[2,2,0],[1,2,0],[1,1,0],[1,0,0],[2,0,0],[2,0,1],[1,0,1],[0,0,1],[0,0,0],[0,1,0],[0,1,1],[0,1,2]
+
+To see the solution in Mathematica use:
+Graphics3D[{Thick, 
+  Line[{{0,1,2},{0,0,2},{1,0,2},{1,1,2},{1,2,2},{0,2,2},
+  {0,2,1},{1,2,1},{2,2,1},{2,2,2},
+  {2,1,2},{2,1,1},{2,1,0},{2,2,0},
+  {1,2,0},{1,1,0},{1,0,0},{2,0,0},
+  {2,0,1},{1,0,1},{0,0,1},{0,0,0},
+  {0,1,0},{0,1,1},{0,1,2}
+  }]}]
+
+This was also a recent problem on Komal, see http://www.komal.hu/verseny/feladat.cgi?a=feladat&f=A638&l=hu
+
+The book's picture shows the projections, one can easily verify that these projections are loop-free, so contains no cycle.
