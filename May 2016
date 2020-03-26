@@ -79,3 +79,138 @@ for{i in 1..n}{for{j in 1..n}{
   }printf"\n";}
 
 end;
+-------------
+Hi!
+
+For ** my pair of boards:
+
+rrkrrkrr
+rbqkkqbr
+kqkrbkqk
+rkbnnrkr
+rkrnnbkr
+kqkbrkqk
+rbqkkqbr
+rrkrrkrr
+
+and
+
+rrkrrkrr
+rbqkkqbr
+kqkbrkqk
+rkrnnbkr
+rkbnnrkr
+kqkrbkqk
+rbqkkqbr
+rrkrrkrr
+
+The second board is the reflection of the first one.
+These are the only very special boards where we see all 5 pieces, the board has rotational symmetry and on each square the threat number is the same (what is 12 in our case).
+These boards has no reflectional symmetry (though close to that, the reflection of the board makes a cyclic permutation of the 4 rooks and 4 bishops around the inner 4 knights).
+So these (different) boards has the same attack numbers, hence a solution of the puzzle.
+
+It takes less than 5 minutes to find this solution, and 8 minutes to prove that there is no more such board (not counting the reflectional pair).
+-----------
+/* run: ./glpsol --math -o solution.txt chess10.txt */
+
+param n := 8;
+/* size of the chess board */
+
+var king{i in 1..n, j in 1..n}, binary;
+var queen{i in 1..n, j in 1..n}, binary;
+var rook{i in 1..n, j in 1..n}, binary;
+var bishop{i in 1..n, j in 1..n}, binary;
+var knight{i in 1..n, j in 1..n}, binary;
+var pawn{i in 1..n, j in 1..n}, binary;
+var threat{i in 1..n, j in 1..n}, integer;
+
+s.t. a{i in 1..n,j in 1..n}: king[i,j]+queen[i,j]+rook[i,j]+bishop[i,j]+knight[i,j]+pawn[i,j]<=1;
+/* there is at most one piece on each square */
+
+s.t. b{i in 1..n,j in 1..n}:
+sum{x in 1..n,y in 1..n: (i!=x or j!=y) and (i-x)^2+(j-y)^2<=2}king[x,y]+
+sum{x in 1..n,y in 1..n: (i!=x or j!=y) and (i==x or j==y or abs(i-x)==abs(j-y))}queen[x,y]+
+sum{x in 1..n,y in 1..n: (i!=x or j!=y) and (i==x or j==y)}rook[x,y]+
+sum{x in 1..n,y in 1..n: (i!=x or j!=y) and abs(i-x)==abs(j-y)}bishop[x,y]+
+sum{x in 1..n,y in 1..n: (i-x)^2+(j-y)^2==5}knight[x,y]+
+sum{x in 1..n,y in 1..n: j==y+1 and abs(i-x)==1}pawn[x,y]=threat[i,j];
+/* threat[i,j] is the number of pieces attacking the (i,j) square on the board */
+
+s.t. c{i in 1..n,j in 1..n}:threat[i,j]==threat[1,1];
+/* special condition: same threat number on each square */
+
+s.t. f1{i in 1..n,j in 1..n}:king[i,j]==king[n+1-j,i];
+s.t. f2{i in 1..n,j in 1..n}:queen[i,j]==queen[n+1-j,i];
+s.t. f3{i in 1..n,j in 1..n}:rook[i,j]==rook[n+1-j,i];
+s.t. f4{i in 1..n,j in 1..n}:bishop[i,j]==bishop[n+1-j,i];
+s.t. f5{i in 1..n,j in 1..n}:knight[i,j]==knight[n+1-j,i];
+s.t. f6{i in 1..n,j in 1..n}:pawn[i,j]==pawn[n+1-j,i];
+/* search for a rotational symmetric solution */
+
+s.t. c1:sum{i in 1..n,j in 1..n}king[i,j]>=1;
+s.t. c2:sum{i in 1..n,j in 1..n}queen[i,j]>=1;
+s.t. c3:sum{i in 1..n,j in 1..n}rook[i,j]>=1;
+s.t. c4:sum{i in 1..n,j in 1..n}bishop[i,j]>=1;
+s.t. c5:sum{i in 1..n,j in 1..n}knight[i,j]>=1;
+/* use king,queen,rook,bishop and knight on the board */
+
+/* uncomment these two lines to prove that there is no other solution! */
+/*s.t. v1:rook[1,1]+rook[1,2]+king[1,3]+rook[1,4]+rook[2,1]+bishop[2,2]+queen[2,3]+king[2,4]+king[3,1]+queen[3,2]+king[3,3]+rook[3,4]+rook[4,1]+king[4,2]+bishop[4,3]+knight[4,4]<=15;*/
+/*s.t. v2:rook[1,1]+rook[1,2]+king[1,3]+rook[1,4]+rook[2,1]+bishop[2,2]+queen[2,3]+king[2,4]+king[3,1]+queen[3,2]+king[3,3]+bishop[3,4]+rook[4,1]+king[4,2]+rook[4,3]+knight[4,4]<=15;*/
+
+/* any solution will be good */
+minimize total: 0;
+
+/* solve the integer programming problem */
+solve;
+
+/* print out the solution */
+printf"Threat number=%d;\n",threat[1,1];
+for{i in 1..n}{for{j in 1..n}{
+  printf"%s", if king[i,j] then "k" 
+  else if queen[i,j] then "q" 
+  else if rook[i,j] then "r"
+  else if bishop[i,j] then "b"
+  else if knight[i,j] then "n"
+  else if pawn[i,j] then "p"
+  else "=";
+  }printf"\n";}
+
+end;
+-------------
+
+Hi!
+
+For ** my updated pair of boards (thanks for your previous letter!)
+
+==krrk==
+===bb===
+k=q==q=k
+rb=nn=br
+rb=nn=br
+k=q==q=k
+===bb===
+==krrk==
+
+and
+
+==qkkq==
+===nn===
+q=b==b=q
+kn=rr=nk
+kn=rr=nk
+q=b==b=q
+===nn===
+==qkkq==
+
+Both of these are (rotational+reflectional) symmetric boards, the advantage in this search is that for these boards the threat numbers are also symmetrical. This gives that if the threat numbers are the same in 10 given squares then it will be the same on the remaining squares. Since there are only 6^10=60466176 such boards (without pawn) it was also possible to find all good pair of symmetric boards: first generate the boards then sort by the threat numbers (used less than 2GB of memory). In less than half a minute found 2226 solution pair of boards.
+
+The threat numbers for the above boards:
+6 3 6 6 6 6 3 6 
+3 4 4 7 7 4 4 3 
+6 4 7 7 7 7 4 6 
+6 7 7 6 6 7 7 6 
+6 7 7 6 6 7 7 6 
+6 4 7 7 7 7 4 6 
+3 4 4 7 7 4 4 3 
+6 3 6 6 6 6 3 6
